@@ -1,0 +1,6 @@
+<div class="flash flash-ok">
+  ✅ 已匯入「{{ resource.title }}」:新增 {{ added }} 項{% if total != added %}(來源共 {{ total }} 支,其餘已存在,已去重){% endif %}。
+</div>
+<div id="resources-container" hx-swap-oob="true">
+  {% include "partials/resources.html" %}
+</div>

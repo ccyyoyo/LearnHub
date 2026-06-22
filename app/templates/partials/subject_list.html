@@ -1,0 +1,17 @@
+{% if subject_rows %}
+<ul class="subject-list">
+  {% for subject, count in subject_rows %}
+  <li class="subject-card">
+    <a class="subject-name" href="/subjects/{{ subject.id }}">{{ subject.name }}</a>
+    <span class="count">{{ count }} 個資源</span>
+    <button class="link-danger"
+            hx-delete="/subjects/{{ subject.id }}"
+            hx-target="#subject-list"
+            hx-swap="innerHTML"
+            hx-confirm="確定刪除「{{ subject.name }}」及其所有資源與項目?">刪除</button>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="empty">還沒有主題,新增一個開始吧!</p>
+{% endif %}

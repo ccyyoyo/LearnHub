@@ -1,0 +1,20 @@
+<li class="item-row status-{{ item.status.value }}" id="item-{{ item.id }}">
+  {% if item.thumbnail_url %}
+  <a href="{{ item.youtube_url }}" target="_blank" rel="noopener" class="thumb">
+    <img src="{{ item.thumbnail_url }}" alt="" loading="lazy">
+  </a>
+  {% endif %}
+  <a href="{{ item.youtube_url }}" target="_blank" rel="noopener" class="item-title">
+    {{ item.title }}
+  </a>
+  <button class="status-btn status-{{ item.status.value }}"
+          hx-post="/items/{{ item.id }}/cycle"
+          hx-target="#item-{{ item.id }}"
+          hx-swap="outerHTML"
+          title="點一下切換狀態">
+    {{ STATUS_LABELS[item.status] }}
+  </button>
+</li>
+{% if with_oob_progress %}
+  {% include "partials/progress.html" %}
+{% endif %}

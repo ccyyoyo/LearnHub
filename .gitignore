@@ -216,3 +216,9 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# LearnHub local data (single-file SQLite DB — PRD §7.2)
+learnhub.db
+learnhub.db-journal
+*.db-wal
+*.db-shm

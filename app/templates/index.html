@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="panel">
+  <h2>主題</h2>
+  <p class="hint">把不同領域的學習資源分到各自的主題下,彼此不會混在一起。</p>
+  <form class="inline-form"
+        hx-post="/subjects"
+        hx-target="#subject-list"
+        hx-swap="innerHTML"
+        hx-on::after-request="this.reset()">
+    <input name="name" placeholder="新增主題(例:日語 N5、Rust)" autocomplete="off" required>
+    <button type="submit">新增</button>
+  </form>
+  <div id="subject-list">
+    {% include "partials/subject_list.html" %}
+  </div>
+</section>
+{% endblock %}

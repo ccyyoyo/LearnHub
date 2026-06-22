@@ -1,0 +1,20 @@
+<section class="resource" id="resource-{{ resource.id }}">
+  <header class="resource-head">
+    <div class="resource-meta">
+      <span class="badge badge-{{ resource.type.value }}">
+        {{ '播放清單' if resource.type.value == 'playlist' else '單支影片' }}
+      </span>
+      <a class="resource-title" href="{{ resource.source_url }}" target="_blank" rel="noopener">
+        {{ resource.title }}
+      </a>
+    </div>
+    {% include "partials/progress.html" %}
+  </header>
+  <ul class="items">
+    {% for item in resource.items | sort(attribute='position') %}
+      {% if filter_item(item) %}
+        {% include "partials/item_row.html" %}
+      {% endif %}
+    {% endfor %}
+  </ul>
+</section>

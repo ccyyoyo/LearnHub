@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+<nav class="crumb"><a href="/">← 所有主題</a></nav>
+<h2>{{ subject.name }}</h2>
+
+<section class="panel import-panel">
+  <h3>匯入資源</h3>
+  <p class="hint">貼上 YouTube 播放清單或單支影片網址,系統會自動拆成可追蹤的項目。重複匯入同一網址會自動去重。</p>
+  <form class="inline-form"
+        hx-post="/import"
+        hx-target="#import-feedback"
+        hx-swap="innerHTML"
+        hx-indicator="#import-spinner"
+        hx-disabled-elt="find button"
+        hx-on::after-request="if(event.detail.successful){this.querySelector('input[name=url]').value=''}">
+    <input type="hidden" name="subject_id" value="{{ subject.id }}">
+    <input name="url" placeholder="https://www.youtube.com/playlist?list=…" autocomplete="off" required>
+    <button type="submit">匯入</button>
+    <span id="import-spinner" class="htmx-indicator spinner">匯入中…</span>
+  </form>
+  <div id="import-feedback"></div>
+</section>
+
+<nav class="filters">
+  <span class="filters-label">檢視:</span>
+  <a href="?filter=all" class="filter {{ 'active' if filter == 'all' }}">全部</a>
+  <a href="?filter=in_progress" class="filter {{ 'active' if filter == 'in_progress' }}">進行中</a>
+  <a href="?filter=incomplete" class="filter {{ 'active' if filter == 'incomplete' }}">未完成</a>
+</nav>
+
+<div id="resources-container">
+  {% include "partials/resources.html" %}
+</div>
+{% endblock %}
