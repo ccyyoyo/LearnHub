@@ -8,7 +8,16 @@
         {{ resource.title }}
       </a>
     </div>
-    {% include "partials/progress.html" %}
+    <div class="resource-aside">
+      {% include "partials/progress.html" %}
+      {% if edit %}
+      <button class="link-danger"
+              hx-delete="/subjects/{{ subject.id }}/resources/{{ resource.id }}?filter={{ filter }}&edit=1"
+              hx-target="#resources-container"
+              hx-swap="innerHTML"
+              hx-confirm="確定刪除整個資源「{{ resource.title }}」及其所有項目?">刪除資源</button>
+      {% endif %}
+    </div>
   </header>
   <ul class="items">
     {% for item in resource.items | sort(attribute='position') %}

@@ -1,4 +1,7 @@
 <li class="item-row status-{{ item.status.value }}" id="item-{{ item.id }}">
+  {% if edit %}
+  <input class="item-check" type="checkbox" name="item_ids" value="{{ item.id }}" aria-label="選取「{{ item.title }}」">
+  {% endif %}
   {% if item.thumbnail_url %}
   <a href="{{ item.youtube_url }}" target="_blank" rel="noopener" class="thumb">
     <img src="{{ item.thumbnail_url }}" alt="" loading="lazy">
@@ -7,6 +10,9 @@
   <a href="{{ item.youtube_url }}" target="_blank" rel="noopener" class="item-title">
     {{ item.title }}
   </a>
+  {% if edit %}
+  <span class="status-badge status-{{ item.status.value }}">{{ STATUS_LABELS[item.status] }}</span>
+  {% else %}
   <button class="status-btn status-{{ item.status.value }}"
           hx-post="/items/{{ item.id }}/cycle"
           hx-target="#item-{{ item.id }}"
@@ -14,6 +20,7 @@
           title="點一下切換狀態">
     {{ STATUS_LABELS[item.status] }}
   </button>
+  {% endif %}
 </li>
 {% if with_oob_progress %}
   {% include "partials/progress.html" %}

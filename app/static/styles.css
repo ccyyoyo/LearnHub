@@ -156,6 +156,50 @@ button:disabled { opacity: .6; cursor: progress; }
 .flash-ok { background: #f0fdf4; color: var(--ok); border: 1px solid #bbf7d0; }
 .flash-error { background: #fef2f2; color: var(--warn); border: 1px solid #fecaca; }
 
+/* Subject header + inline rename */
+.subject-header { display: flex; align-items: center; gap: 12px; }
+.subject-header h2 { margin: 8px 0 16px; }
+.link-edit {
+  background: none; color: var(--brand); padding: 4px 10px; font-weight: 500; font-size: .85rem;
+}
+.link-edit:hover { background: #eef2ff; }
+.rename-form { margin: 8px 0 16px; }
+.btn-secondary { background: #e5e7eb; color: var(--ink); }
+.btn-secondary:hover { background: #d1d5db; }
+
+/* Edit-mode toolbar + bulk action bar */
+.toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.toolbar .filters { margin: 4px 0 16px; }
+.btn-toggle {
+  text-decoration: none; font-size: .88rem; padding: 6px 14px; border-radius: 8px;
+  border: 1px solid var(--brand); color: var(--brand); background: #fff; font-weight: 600;
+}
+.btn-toggle:hover { background: #eef2ff; }
+.btn-toggle.active { background: var(--brand); color: #fff; }
+
+.bulk-actions {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 12px 14px; margin-bottom: 16px;
+  background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 10px;
+}
+.bulk-hint { color: var(--muted); font-size: .88rem; }
+.bulk-actions select {
+  padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; font-size: .9rem; font-family: inherit;
+}
+.btn-danger { background: var(--warn); color: #fff; padding: 8px 14px; }
+.btn-danger:hover { background: #991b1b; }
+
+/* Resource aside (progress + delete) + item checkbox / read-only status */
+.resource-aside { display: flex; align-items: center; gap: 12px; }
+.item-check { width: 18px; height: 18px; flex: 0 0 auto; accent-color: var(--brand); cursor: pointer; }
+.status-badge {
+  min-width: 72px; text-align: center; color: #fff; font-size: .92rem; font-weight: 600;
+  padding: 9px 16px; border-radius: 8px;
+}
+.status-badge.status-not_started { background: var(--not-started); }
+.status-badge.status-in_progress { background: var(--in-progress); }
+.status-badge.status-done { background: var(--done); }
+
 /* HTMX indicator */
 .htmx-indicator { opacity: 0; transition: opacity .2s; }
 .htmx-request .htmx-indicator,

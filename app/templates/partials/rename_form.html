@@ -1,0 +1,11 @@
+<form id="subject-header" class="inline-form rename-form"
+      hx-post="/subjects/{{ subject.id }}/rename"
+      hx-target="#subject-header"
+      hx-swap="outerHTML">
+  <input name="name" value="{{ subject.name }}" autocomplete="off" required autofocus>
+  <button type="submit">儲存</button>
+  <button type="button" class="btn-secondary"
+          hx-get="/subjects/{{ subject.id }}/header"
+          hx-target="#subject-header"
+          hx-swap="outerHTML">取消</button>
+</form>

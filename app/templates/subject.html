@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <nav class="crumb"><a href="/">← 所有主題</a></nav>
-<h2>{{ subject.name }}</h2>
+{% include "partials/subject_header.html" %}
 
 <section class="panel import-panel">
   <h3>匯入資源</h3>
@@ -21,14 +21,50 @@
   <div id="import-feedback"></div>
 </section>
 
-<nav class="filters">
-  <span class="filters-label">檢視:</span>
-  <a href="?filter=all" class="filter {{ 'active' if filter == 'all' }}">全部</a>
-  <a href="?filter=in_progress" class="filter {{ 'active' if filter == 'in_progress' }}">進行中</a>
-  <a href="?filter=incomplete" class="filter {{ 'active' if filter == 'incomplete' }}">未完成</a>
-</nav>
+<div class="toolbar">
+  <nav class="filters">
+    <span class="filters-label">檢視:</span>
+    <a href="?filter=all{% if edit %}&edit=1{% endif %}" class="filter {{ 'active' if filter == 'all' }}">全部</a>
+    <a href="?filter=in_progress{% if edit %}&edit=1{% endif %}" class="filter {{ 'active' if filter == 'in_progress' }}">進行中</a>
+    <a href="?filter=incomplete{% if edit %}&edit=1{% endif %}" class="filter {{ 'active' if filter == 'incomplete' }}">未完成</a>
+  </nav>
+  {% if edit %}
+  <a class="btn-toggle active" href="?filter={{ filter }}">完成編輯</a>
+  {% else %}
+  <a class="btn-toggle" href="?filter={{ filter }}&edit=1">編輯</a>
+  {% endif %}
+</div>
 
+{% if edit %}
+<form id="bulk-form">
+  <input type="hidden" name="filter" value="{{ filter }}">
+  <input type="hidden" name="edit" value="1">
+  <div class="bulk-actions">
+    <span class="bulk-hint">勾選項目後:</span>
+    <select name="status" aria-label="設定狀態">
+      <option value="not_started">未開始</option>
+      <option value="in_progress">進行中</option>
+      <option value="done">已完成</option>
+    </select>
+    <button type="button"
+            hx-post="/subjects/{{ subject.id }}/items/bulk-status"
+            hx-include="#bulk-form"
+            hx-target="#resources-container"
+            hx-swap="innerHTML">套用狀態</button>
+    <button type="button" class="link-danger btn-danger"
+            hx-post="/subjects/{{ subject.id }}/items/bulk-delete"
+            hx-include="#bulk-form"
+            hx-target="#resources-container"
+            hx-swap="innerHTML"
+            hx-confirm="確定刪除勾選的項目?">刪除勾選</button>
+  </div>
+  <div id="resources-container">
+    {% include "partials/resources.html" %}
+  </div>
+</form>
+{% else %}
 <div id="resources-container">
   {% include "partials/resources.html" %}
 </div>
+{% endif %}
 {% endblock %}

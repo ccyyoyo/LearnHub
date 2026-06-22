@@ -103,3 +103,130 @@ def test_filter_incomplete(client):
 
     incomplete = client.get(f"/subjects/{sid}?filter=incomplete").text
     assert incomplete.count('class="item-row') == 0
+
+
+# --- Subject rename (inline edit) -------------------------------------------
+
+
+def test_subject_page_has_rename_trigger(client):
+    _create_subject(client)
+    sid = _subject_id(client)
+    page = client.get(f"/subjects/{sid}").text
+    assert "改名" in page
+    assert f"/subjects/{sid}/rename-form" in page
+
+
+def test_rename_form_returns_editable_form(client):
+    _create_subject(client, name="舊名")
+    sid = _subject_id(client)
+    form = client.get(f"/subjects/{sid}/rename-form")
+    assert form.status_code == 200
+    assert "舊名" in form.text
+    assert f"/subjects/{sid}/rename" in form.text
+
+
+def test_rename_returns_header_fragment(client):
+    _create_subject(client, name="舊名")
+    sid = _subject_id(client)
+    r = client.post(f"/subjects/{sid}/rename", data={"name": "新名"})
+    assert r.status_code == 200
+    assert "新名" in r.text
+    # Header fragment, not the whole page (the import panel lives on the page).
+    assert "匯入資源" not in r.text
+
+
+def test_rename_empty_keeps_old_name(client):
+    _create_subject(client, name="舊名")
+    sid = _subject_id(client)
+    client.post(f"/subjects/{sid}/rename", data={"name": "   "})
+    assert "舊名" in client.get(f"/subjects/{sid}").text
+
+
+# --- Edit mode + bulk operations --------------------------------------------
+
+
+def _imported_subject(client, name="主題"):
+    _create_subject(client, name=name)
+    sid = _subject_id(client)
+    client.post(
+        "/import",
+        data={"subject_id": sid, "url": "https://www.youtube.com/playlist?list=PLtest"},
+    )
+    return sid
+
+
+def _item_ids(client, sid):
+    import re
+
+    page = client.get(f"/subjects/{sid}").text
+    return [int(x) for x in re.findall(r'id="item-(\d+)"', page)]
+
+
+def test_edit_mode_renders_controls(client):
+    sid = _imported_subject(client)
+
+    normal = client.get(f"/subjects/{sid}").text
+    assert 'name="item_ids"' not in normal  # no checkboxes by default
+
+    edit = client.get(f"/subjects/{sid}?edit=1").text
+    assert 'name="item_ids"' in edit  # multi-select checkboxes
+    assert "bulk-status" in edit  # bulk status action wired
+    assert "bulk-delete" in edit  # bulk delete action wired
+    assert f"/subjects/{sid}/resources/" in edit  # per-resource delete button
+
+
+def test_bulk_status_sets_only_selected(client):
+    sid = _imported_subject(client)
+    ids = _item_ids(client, sid)
+    assert len(ids) == 3
+
+    r = client.post(
+        f"/subjects/{sid}/items/bulk-status",
+        data={"item_ids": ids[:2], "status": "done", "filter": "all", "edit": "1"},
+    )
+    assert r.status_code == 200
+    page = client.get(f"/subjects/{sid}").text
+    assert "2/3" in page  # exactly the two selected are done
+
+
+def test_bulk_delete_removes_selected_and_recomputes(client):
+    sid = _imported_subject(client)
+    ids = _item_ids(client, sid)
+
+    r = client.post(
+        f"/subjects/{sid}/items/bulk-delete",
+        data={"item_ids": ids[:2], "filter": "all", "edit": "1"},
+    )
+    assert r.status_code == 200
+    page = client.get(f"/subjects/{sid}").text
+    assert page.count('class="item-row') == 1
+    assert "0/1" in page  # progress recomputed over the remaining item
+
+
+def test_bulk_ignores_cross_subject_ids(client):
+    sid_a = _imported_subject(client, name="A")
+    ids_a = _item_ids(client, sid_a)
+
+    sid_b = _imported_subject(client, name="B")
+
+    # Try to delete A's items through B's endpoint — must be ignored.
+    client.post(
+        f"/subjects/{sid_b}/items/bulk-delete",
+        data={"item_ids": ids_a, "filter": "all", "edit": "1"},
+    )
+    page_a = client.get(f"/subjects/{sid_a}").text
+    assert page_a.count('class="item-row') == 3  # A untouched
+
+
+def test_delete_whole_resource(client):
+    sid = _imported_subject(client)
+    import re
+
+    page = client.get(f"/subjects/{sid}").text
+    rid = int(re.search(r'id="resource-(\d+)"', page).group(1))
+
+    r = client.delete(f"/subjects/{sid}/resources/{rid}")
+    assert r.status_code == 200
+    page = client.get(f"/subjects/{sid}").text
+    assert page.count('class="item-row') == 0
+    assert "還沒有資源" in page

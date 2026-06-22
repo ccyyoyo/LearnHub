@@ -1,0 +1,8 @@
+<div id="subject-header" class="subject-header">
+  <h2>{{ subject.name }}</h2>
+  <button class="link-edit"
+          hx-get="/subjects/{{ subject.id }}/rename-form"
+          hx-target="#subject-header"
+          hx-swap="outerHTML"
+          title="改主題名稱">改名</button>
+</div>
