@@ -5,3 +5,6 @@
 {% else %}
   <p class="empty">這個主題還沒有資源。用上面的輸入框貼上 YouTube 網址開始匯入。</p>
 {% endif %}
+{% if emit_oob_floating %}
+  {% with floating_oob = true %}{% include "partials/floating_progress.html" %}{% endwith %}
+{% endif %}

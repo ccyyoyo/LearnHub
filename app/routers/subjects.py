@@ -8,20 +8,30 @@ from sqlmodel import Session, select
 
 from ..db import get_session
 from ..models import Item, ItemStatus, Resource, Subject, utcnow
-from ..services import normalize_progress_mode
+from ..services import normalize_progress_mode, overall_progress, subject_progress
 from ..templating import templates
 from ..youtube import YouTubeClient, YouTubeError
 
 router = APIRouter()
 
 
-def _subject_counts(session: Session) -> list[tuple[Subject, int]]:
+def _subjects_with_counts(
+    session: Session,
+) -> tuple[list[Subject], list[tuple[Subject, int]]]:
     subjects = session.exec(select(Subject).order_by(Subject.created_at)).all()
-    rows: list[tuple[Subject, int]] = []
-    for subject in subjects:
-        count = len(subject.resources)
-        rows.append((subject, count))
-    return rows
+    rows = [(subject, len(subject.resources)) for subject in subjects]
+    return subjects, rows
+
+
+def _subject_list_context(session: Session) -> dict:
+    """Subject list rows + the floating overall-progress widget (OOB)."""
+    subjects, rows = _subjects_with_counts(session)
+    return {
+        "subject_rows": rows,
+        "fp": overall_progress(subjects),
+        "floating_progress_title": "總進度",
+        "emit_oob_floating": True,
+    }
 
 
 def _filter_predicate(filter: str):
@@ -47,18 +57,18 @@ def _subject_context(
         "filter_item": _filter_predicate(filter),
         "edit": edit,
         "progress_mode": normalize_progress_mode(progress),
+        "fp": subject_progress(subject),
+        "floating_progress_title": subject.name,
     }
 
 
 def _render_resources(
     request: Request, subject: Subject, filter: str, edit: bool, progress: str = "count"
 ) -> HTMLResponse:
-    """Re-render just the resources list, preserving filter + edit + progress state."""
-    return templates.TemplateResponse(
-        request,
-        "partials/resources.html",
-        _subject_context(subject, filter, edit, progress),
-    )
+    """Re-render the resources list, preserving filter + edit + progress state."""
+    context = _subject_context(subject, filter, edit, progress)
+    context["emit_oob_floating"] = True  # refresh the floating widget too
+    return templates.TemplateResponse(request, "partials/resources.html", context)
 
 
 def _subject_items(
@@ -77,11 +87,9 @@ def _subject_items(
 @router.get("/", response_class=HTMLResponse)
 def home(request: Request, session: Session = Depends(get_session)):
     """Landing page: subjects with their resource counts (FR-1.2)."""
-    return templates.TemplateResponse(
-        request,
-        "index.html",
-        {"subject_rows": _subject_counts(session)},
-    )
+    context = _subject_list_context(session)
+    context["emit_oob_floating"] = False  # full page: base.html renders it inline
+    return templates.TemplateResponse(request, "index.html", context)
 
 
 @router.post("/subjects", response_class=HTMLResponse)
@@ -96,9 +104,7 @@ def create_subject(
         session.add(Subject(name=name))
         session.commit()
     return templates.TemplateResponse(
-        request,
-        "partials/subject_list.html",
-        {"subject_rows": _subject_counts(session)},
+        request, "partials/subject_list.html", _subject_list_context(session)
     )
 
 
@@ -166,9 +172,7 @@ def delete_subject(
         session.delete(subject)
         session.commit()
     return templates.TemplateResponse(
-        request,
-        "partials/subject_list.html",
-        {"subject_rows": _subject_counts(session)},
+        request, "partials/subject_list.html", _subject_list_context(session)
     )
 
 

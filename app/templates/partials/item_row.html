@@ -28,3 +28,6 @@
 {% if with_oob_progress %}
   {% include "partials/progress.html" %}
 {% endif %}
+{% if with_oob_floating %}
+  {% with floating_oob = true %}{% include "partials/floating_progress.html" %}{% endwith %}
+{% endif %}

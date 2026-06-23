@@ -15,3 +15,6 @@
 {% else %}
 <p class="empty">還沒有主題,新增一個開始吧!</p>
 {% endif %}
+{% if emit_oob_floating %}
+  {% with floating_oob = true %}{% include "partials/floating_progress.html" %}{% endwith %}
+{% endif %}

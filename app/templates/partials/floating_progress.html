@@ -1,0 +1,20 @@
+{# Floating bottom-right progress widget. Always renders the #floating-progress
+   element so out-of-band swaps always have a target; visually hidden when there
+   are no items to track. Set `floating_oob` truthy to emit hx-swap-oob. #}
+{% set _fp = fp if (fp is defined and fp) else None %}
+{% set _has = _fp and _fp.total > 0 %}
+<aside class="floating-progress{% if not _has %} is-empty{% endif %}{% if _has and _fp.percent == 100 %} is-complete{% endif %}"
+       id="floating-progress"
+       {% if floating_oob %}hx-swap-oob="true"{% endif %}
+       aria-label="學習進度">
+  {% if _has %}
+  <div class="fp-head">
+    <span class="fp-title" title="{{ floating_progress_title }}">{{ floating_progress_title }}</span>
+    <span class="fp-count">{{ _fp.done }}/{{ _fp.total }}</span>
+  </div>
+  <div class="fp-row">
+    <div class="fp-bar"><span style="width: {{ _fp.percent }}%"></span></div>
+    <span class="fp-percent">{{ _fp.percent }}%</span>
+  </div>
+  {% endif %}
+</aside>

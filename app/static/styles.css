@@ -219,6 +219,37 @@ button:disabled { opacity: .6; cursor: progress; }
 .status-badge.status-in_progress { background: var(--in-progress); }
 .status-badge.status-done { background: var(--done); }
 
+/* Floating overall/subject progress (bottom-right, always visible) */
+.floating-progress {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  width: 260px;
+  max-width: calc(100vw - 40px);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: 0 6px 24px rgba(31, 36, 48, .14);
+  padding: 12px 14px;
+  z-index: 50;
+}
+.floating-progress.is-empty { display: none; }
+.fp-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 10px; margin-bottom: 8px;
+}
+.fp-title {
+  font-weight: 600; font-size: .9rem; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.fp-count { color: var(--muted); font-size: .82rem; white-space: nowrap; }
+.fp-row { display: flex; align-items: center; gap: 10px; }
+.fp-bar { flex: 1; height: 10px; background: var(--line); border-radius: 999px; overflow: hidden; }
+.fp-bar span { display: block; height: 100%; width: 0; background: var(--brand); transition: width .3s ease; }
+.fp-percent { font-size: .9rem; font-weight: 700; color: var(--brand); white-space: nowrap; }
+.floating-progress.is-complete .fp-bar span { background: var(--done); }
+.floating-progress.is-complete .fp-percent { color: var(--done); }
+
 /* HTMX indicator */
 .htmx-indicator { opacity: 0; transition: opacity .2s; }
 .htmx-request .htmx-indicator,

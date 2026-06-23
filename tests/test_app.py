@@ -313,3 +313,51 @@ def test_delete_whole_resource(client):
     page = client.get(f"/subjects/{sid}").text
     assert page.count('class="item-row') == 0
     assert "還沒有資源" in page
+
+
+# --- Floating progress widget -----------------------------------------------
+
+
+def test_home_shows_floating_overall_progress(client):
+    sid = _imported_subject(client)  # 3 items, none done yet
+    home = client.get("/").text
+    assert 'id="floating-progress"' in home
+    assert "總進度" in home
+    assert "0/3" in home
+
+
+def test_subject_page_shows_floating_progress(client):
+    sid = _imported_subject(client, name="日語")
+    page = client.get(f"/subjects/{sid}").text
+    assert 'id="floating-progress"' in page
+    # Title is the subject name, inside the floating widget.
+    assert 'class="fp-title"' in page
+    assert "日語" in page
+
+
+def test_cycle_updates_floating_widget_oob(client):
+    sid = _imported_subject(client)
+    iid = _item_ids(client, sid)[0]
+    r = client.post(f"/items/{iid}/cycle")  # -> in_progress
+    # Floating widget refreshed out-of-band alongside the row + resource bar.
+    assert 'id="floating-progress"' in r.text
+    assert 'hx-swap-oob="true"' in r.text
+
+
+def test_floating_marks_complete_at_100_percent(client):
+    sid = _imported_subject(client)
+    for iid in _item_ids(client, sid):
+        client.post(f"/items/{iid}/cycle")  # -> in_progress
+        client.post(f"/items/{iid}/cycle")  # -> done
+    page = client.get(f"/subjects/{sid}").text
+    assert "is-complete" in page  # all items done
+    assert "3/3" in page
+
+
+def test_floating_hidden_when_no_items(client):
+    _create_subject(client, name="空主題")
+    sid = _subject_id(client)
+    page = client.get(f"/subjects/{sid}").text
+    # Element still present (so OOB swaps have a target) but visually hidden.
+    assert 'id="floating-progress"' in page
+    assert "is-empty" in page

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .models import Item, ItemStatus, Resource
+from .models import Item, ItemStatus, Resource, Subject
 
 # Progress can be measured two ways (user's choice in the toolbar): by number of
 # videos finished, or by watch-time finished. "count" stays the default.
@@ -77,6 +77,18 @@ def resource_progress(resource: Resource, mode: str = DEFAULT_PROGRESS_MODE) -> 
 def resource_total_seconds(resource: Resource) -> int:
     """Total watch-time of a resource (shown regardless of progress mode)."""
     return sum(_seconds(it) for it in resource.items)
+
+
+def subject_progress(subject: Subject) -> Progress:
+    """Completion across every item in every resource under a subject."""
+    items = [it for res in subject.resources for it in res.items]
+    return item_progress(items)
+
+
+def overall_progress(subjects: list[Subject]) -> Progress:
+    """Completion across every item the learner has, used on the landing page."""
+    items = [it for sub in subjects for res in sub.resources for it in res.items]
+    return item_progress(items)
 
 
 # Status cycle used by the one-click toggle (FR-3.1):

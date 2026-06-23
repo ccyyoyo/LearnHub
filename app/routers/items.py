@@ -8,7 +8,7 @@ from sqlmodel import Session
 
 from ..db import get_session
 from ..models import Item, ItemStatus, utcnow
-from ..services import next_status, normalize_progress_mode
+from ..services import next_status, normalize_progress_mode, subject_progress
 from ..templating import templates
 
 router = APIRouter(prefix="/items")
@@ -17,10 +17,12 @@ router = APIRouter(prefix="/items")
 def _render(request: Request, item: Item, progress: str = "count") -> HTMLResponse:
     """Return the swapped item row plus an out-of-band resource progress bar.
 
-    HTMX swaps the row in place, and the OOB fragment updates the parent
-    resource's completion without a full reload (FR-3.2). ``progress`` keeps the
-    re-rendered bar in whichever mode (count / time) the user is viewing.
+    HTMX swaps the row in place, and the OOB fragments update both the parent
+    resource's completion and the floating subject-progress widget (x/y + %)
+    without a full reload (FR-3.2). ``progress`` keeps the re-rendered bar in
+    whichever mode (count / time) the user is viewing.
     """
+    subject = item.resource.subject
     return templates.TemplateResponse(
         request,
         "partials/item_row.html",
@@ -29,6 +31,9 @@ def _render(request: Request, item: Item, progress: str = "count") -> HTMLRespon
             "resource": item.resource,
             "with_oob_progress": True,
             "progress_mode": normalize_progress_mode(progress),
+            "with_oob_floating": True,
+            "fp": subject_progress(subject),
+            "floating_progress_title": subject.name,
         },
     )
 

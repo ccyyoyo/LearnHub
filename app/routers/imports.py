@@ -12,7 +12,7 @@ from sqlmodel import Session, select
 
 from ..db import get_session
 from ..models import Item, Resource, Subject
-from ..services import normalize_progress_mode
+from ..services import normalize_progress_mode, subject_progress
 from ..templating import templates
 from ..youtube import YouTubeClient, YouTubeError, parse_youtube_url
 
@@ -91,6 +91,8 @@ async def import_resource(
             "filter": "all",
             "edit": False,
             "progress_mode": normalize_progress_mode(progress),
+            "fp": subject_progress(subject),
+            "floating_progress_title": subject.name,
         },
     )
 
