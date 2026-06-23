@@ -1,0 +1,31 @@
+{# AI assist row, rendered right after its item row (Phase 3). A separate <li>
+   so the status-toggle's outerHTML swap on #item-<id> never wipes it. Hidden in
+   edit mode to keep bulk editing focused. #}
+{% if not edit %}
+{% set ai = ai_map.get(item.video_id, {}) if ai_map else {} %}
+<li class="ai-row" id="ai-{{ item.id }}">
+  <div class="ai-bar">
+    <button class="ai-btn"
+            hx-post="/items/{{ item.id }}/summarize"
+            hx-target="#ai-out-summary-{{ item.id }}"
+            hx-swap="innerHTML"
+            hx-indicator="#ai-spin-{{ item.id }}"
+            hx-disabled-elt="this">✨ 摘要</button>
+    <button class="ai-btn"
+            hx-post="/items/{{ item.id }}/notes"
+            hx-target="#ai-out-notes-{{ item.id }}"
+            hx-swap="innerHTML"
+            hx-indicator="#ai-spin-{{ item.id }}"
+            hx-disabled-elt="this">📝 重點筆記</button>
+    <span id="ai-spin-{{ item.id }}" class="htmx-indicator spinner">AI 產生中…</span>
+  </div>
+  <div class="ai-out">
+    <div id="ai-out-summary-{{ item.id }}">
+      {% if ai.summary %}{% set art = ai.summary %}{% include "partials/ai_result.html" %}{% endif %}
+    </div>
+    <div id="ai-out-notes-{{ item.id }}">
+      {% if ai.notes %}{% set art = ai.notes %}{% include "partials/ai_result.html" %}{% endif %}
+    </div>
+  </div>
+</li>
+{% endif %}

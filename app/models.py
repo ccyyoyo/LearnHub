@@ -89,3 +89,49 @@ class Item(SQLModel, table=True):
     @property
     def youtube_url(self) -> str:
         return f"https://www.youtube.com/watch?v={self.video_id}"
+
+
+class AIKind(str, Enum):
+    summary = "summary"
+    notes = "notes"
+
+
+# Human labels for the AI artifact kinds, shown in the UI.
+AI_KIND_LABELS: dict[AIKind, str] = {
+    AIKind.summary: "摘要",
+    AIKind.notes: "重點筆記",
+}
+
+
+class Transcript(SQLModel, table=True):
+    """Cached caption text for a video, keyed by ``video_id`` (Phase 3).
+
+    Keyed by the video — not by ``Item`` — so the same video appearing under
+    multiple resources is fetched once and reused. Captions can't be downloaded
+    via the official Data API for videos you don't own, so this is populated by
+    ``youtube-transcript-api`` (see ``transcript.py``).
+    """
+
+    video_id: str = Field(primary_key=True)
+    language: str
+    content: str
+    fetched_at: datetime = Field(default_factory=utcnow)
+
+
+class AIArtifact(SQLModel, table=True):
+    """An LLM-generated artifact (summary / notes) for a video (Phase 3).
+
+    Cached by ``(video_id, kind)`` so we never pay to regenerate the same thing;
+    keyed by video for the same reuse reason as ``Transcript``.
+    """
+
+    __table_args__ = (
+        UniqueConstraint("video_id", "kind", name="uq_ai_video_kind"),
+    )
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    video_id: str = Field(index=True)
+    kind: AIKind
+    content_md: str
+    model: str
+    created_at: datetime = Field(default_factory=utcnow)

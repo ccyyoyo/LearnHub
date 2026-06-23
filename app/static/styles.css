@@ -205,3 +205,26 @@ button:disabled { opacity: .6; cursor: progress; }
 .htmx-request .htmx-indicator,
 .htmx-request.htmx-indicator { opacity: 1; }
 .spinner { color: var(--muted); font-size: .88rem; }
+
+/* AI assist (Phase 3) — summary / notes per item */
+.ai-row { list-style: none; padding: 0; margin: -4px 0 2px; border: none; background: none; }
+.ai-bar { display: flex; align-items: center; gap: 8px; padding-left: 4px; flex-wrap: wrap; }
+.ai-btn {
+  background: #eef2ff; color: var(--brand-dark); border: 1px solid #c7d2fe;
+  padding: 5px 12px; font-size: .82rem; font-weight: 600; border-radius: 999px;
+}
+.ai-btn:hover { background: #e0e7ff; }
+.ai-out { display: grid; gap: 10px; }
+.ai-out > div:empty { display: none; }
+.ai-result {
+  margin-top: 8px; border: 1px solid var(--line); border-radius: 10px;
+  background: #fbfbfd; overflow: hidden;
+}
+.ai-result-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 6px 12px; background: #f1f5f9; border-bottom: 1px solid var(--line);
+}
+.ai-tag { font-size: .8rem; font-weight: 700; color: var(--brand-dark); }
+.ai-model { font-size: .72rem; color: var(--muted); }
+.ai-md { padding: 12px 14px; white-space: pre-wrap; font-size: .9rem; line-height: 1.6; }
+.ai-flash { margin: 8px 0 0; }

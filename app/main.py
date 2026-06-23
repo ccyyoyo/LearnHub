@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from .db import init_db
-from .routers import imports, items, subjects
+from .routers import ai, imports, items, subjects
 
 STATIC_DIR = Path(__file__).parent / "static"
 
@@ -25,3 +25,4 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 app.include_router(subjects.router)
 app.include_router(imports.router)
 app.include_router(items.router)
+app.include_router(ai.router)

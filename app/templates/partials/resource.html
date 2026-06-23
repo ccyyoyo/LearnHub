@@ -23,6 +23,7 @@
     {% for item in resource.items | sort(attribute='position') %}
       {% if filter_item(item) %}
         {% include "partials/item_row.html" %}
+        {% include "partials/item_ai.html" %}
       {% endif %}
     {% endfor %}
   </ul>

@@ -1,0 +1,10 @@
+{# One generated artifact (summary or notes). Content is rendered as escaped
+   text with whitespace preserved — never raw HTML — so transcript-influenced
+   model output can't inject markup. #}
+<div class="ai-result ai-{{ art.kind.value }}">
+  <div class="ai-result-head">
+    <span class="ai-tag">{{ '摘要' if art.kind.value == 'summary' else '重點筆記' }}</span>
+    <span class="ai-model">{{ art.model }}</span>
+  </div>
+  <div class="ai-md">{{ art.content_md }}</div>
+</div>

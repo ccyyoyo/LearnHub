@@ -8,6 +8,7 @@ from sqlmodel import Session, select
 
 from ..db import get_session
 from ..models import Item, ItemStatus, Resource, Subject, utcnow
+from ..services import artifacts_by_video
 from ..templating import templates
 
 router = APIRouter()
@@ -34,23 +35,31 @@ def _normalize_filter(filter: str) -> str:
     return filter if filter in {"all", "in_progress", "incomplete"} else "all"
 
 
-def _subject_context(subject: Subject, filter: str, edit: bool) -> dict:
+def _subject_context(
+    subject: Subject, filter: str, edit: bool, session: Session
+) -> dict:
     """Context shared by the subject page and the resources partial."""
+    resources = sorted(subject.resources, key=lambda r: r.created_at)
+    video_ids = {it.video_id for r in resources for it in r.items}
     return {
         "subject": subject,
-        "resources": sorted(subject.resources, key=lambda r: r.created_at),
+        "resources": resources,
         "filter": filter,
         "filter_item": _filter_predicate(filter),
         "edit": edit,
+        # Already-generated summaries/notes, so they show on load (Phase 3).
+        "ai_map": artifacts_by_video(session, video_ids),
     }
 
 
 def _render_resources(
-    request: Request, subject: Subject, filter: str, edit: bool
+    request: Request, subject: Subject, filter: str, edit: bool, session: Session
 ) -> HTMLResponse:
     """Re-render just the resources list, preserving filter + edit state."""
     return templates.TemplateResponse(
-        request, "partials/resources.html", _subject_context(subject, filter, edit)
+        request,
+        "partials/resources.html",
+        _subject_context(subject, filter, edit, session),
     )
 
 
@@ -178,7 +187,9 @@ def subject_detail(
     if not subject:
         raise HTTPException(404, "Subject not found")
     return templates.TemplateResponse(
-        request, "subject.html", _subject_context(subject, _normalize_filter(filter), edit)
+        request,
+        "subject.html",
+        _subject_context(subject, _normalize_filter(filter), edit, session),
     )
 
 
@@ -206,7 +217,7 @@ def bulk_status(
         session.add(item)
     session.commit()
     session.refresh(subject)
-    return _render_resources(request, subject, _normalize_filter(filter), edit)
+    return _render_resources(request, subject, _normalize_filter(filter), edit, session)
 
 
 @router.post("/subjects/{subject_id}/items/bulk-delete", response_class=HTMLResponse)
@@ -226,7 +237,7 @@ def bulk_delete(
         session.delete(item)
     session.commit()
     session.refresh(subject)
-    return _render_resources(request, subject, _normalize_filter(filter), edit)
+    return _render_resources(request, subject, _normalize_filter(filter), edit, session)
 
 
 @router.delete(
@@ -249,4 +260,4 @@ def delete_resource(
         session.delete(resource)
         session.commit()
         session.refresh(subject)
-    return _render_resources(request, subject, _normalize_filter(filter), edit)
+    return _render_resources(request, subject, _normalize_filter(filter), edit, session)

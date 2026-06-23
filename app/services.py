@@ -6,9 +6,12 @@ data model stays free of redundant counters (PRD §8 note).
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 
-from .models import Item, ItemStatus, Resource
+from sqlmodel import Session, select
+
+from .models import AIArtifact, Item, ItemStatus, Resource
 
 
 @dataclass(frozen=True)
@@ -44,3 +47,21 @@ _NEXT = {
 
 def next_status(current: ItemStatus) -> ItemStatus:
     return _NEXT[current]
+
+
+def artifacts_by_video(
+    session: Session, video_ids: Iterable[str]
+) -> dict[str, dict[str, AIArtifact]]:
+    """Map ``{video_id: {kind_value: artifact}}`` for the given videos.
+
+    Lets the subject page render already-generated AI results on load (and after
+    bulk edits) in one query, instead of an HTMX round-trip per item.
+    """
+    ids = list(video_ids)
+    if not ids:
+        return {}
+    rows = session.exec(select(AIArtifact).where(AIArtifact.video_id.in_(ids))).all()
+    out: dict[str, dict[str, AIArtifact]] = {}
+    for art in rows:
+        out.setdefault(art.video_id, {})[art.kind.value] = art
+    return out

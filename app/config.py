@@ -25,6 +25,14 @@ class Settings(BaseSettings):
     # SQLite database location (single file — NFR-1).
     database_url: str = "sqlite:///learnhub.db"
 
+    # Phase 3 (AI). ``llm_provider`` is a seam: only "claude" is wired today, but
+    # routers go through it so a second provider (e.g. OpenRouter) can be added
+    # later without touching them. AI endpoints surface a friendly error when the
+    # key is unset, mirroring the YouTube path.
+    anthropic_api_key: str = ""
+    llm_provider: str = "claude"
+    llm_model: str = "claude-sonnet-4-6"
+
 
 @lru_cache
 def get_settings() -> Settings:
