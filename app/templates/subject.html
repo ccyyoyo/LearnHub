@@ -14,6 +14,7 @@
         hx-disabled-elt="find button"
         hx-on::after-request="if(event.detail.successful){this.querySelector('input[name=url]').value=''}">
     <input type="hidden" name="subject_id" value="{{ subject.id }}">
+    <input type="hidden" name="progress" value="{{ progress_mode }}">
     <input name="url" placeholder="https://www.youtube.com/playlist?list=…" autocomplete="off" required>
     <button type="submit">匯入</button>
     <span id="import-spinner" class="htmx-indicator spinner">匯入中…</span>
@@ -24,20 +25,26 @@
 <div class="toolbar">
   <nav class="filters">
     <span class="filters-label">檢視:</span>
-    <a href="?filter=all{% if edit %}&edit=1{% endif %}" class="filter {{ 'active' if filter == 'all' }}">全部</a>
-    <a href="?filter=in_progress{% if edit %}&edit=1{% endif %}" class="filter {{ 'active' if filter == 'in_progress' }}">進行中</a>
-    <a href="?filter=incomplete{% if edit %}&edit=1{% endif %}" class="filter {{ 'active' if filter == 'incomplete' }}">未完成</a>
+    <a href="?filter=all&progress={{ progress_mode }}{% if edit %}&edit=1{% endif %}" class="filter {{ 'active' if filter == 'all' }}">全部</a>
+    <a href="?filter=in_progress&progress={{ progress_mode }}{% if edit %}&edit=1{% endif %}" class="filter {{ 'active' if filter == 'in_progress' }}">進行中</a>
+    <a href="?filter=incomplete&progress={{ progress_mode }}{% if edit %}&edit=1{% endif %}" class="filter {{ 'active' if filter == 'incomplete' }}">未完成</a>
+  </nav>
+  <nav class="filters">
+    <span class="filters-label">進度:</span>
+    <a href="?filter={{ filter }}&progress=count{% if edit %}&edit=1{% endif %}" class="filter {{ 'active' if progress_mode == 'count' }}">依數量</a>
+    <a href="?filter={{ filter }}&progress=time{% if edit %}&edit=1{% endif %}" class="filter {{ 'active' if progress_mode == 'time' }}">依時間</a>
   </nav>
   {% if edit %}
-  <a class="btn-toggle active" href="?filter={{ filter }}">完成編輯</a>
+  <a class="btn-toggle active" href="?filter={{ filter }}&progress={{ progress_mode }}">完成編輯</a>
   {% else %}
-  <a class="btn-toggle" href="?filter={{ filter }}&edit=1">編輯</a>
+  <a class="btn-toggle" href="?filter={{ filter }}&progress={{ progress_mode }}&edit=1">編輯</a>
   {% endif %}
 </div>
 
 {% if edit %}
 <form id="bulk-form">
   <input type="hidden" name="filter" value="{{ filter }}">
+  <input type="hidden" name="progress" value="{{ progress_mode }}">
   <input type="hidden" name="edit" value="1">
   <div class="bulk-actions">
     <span class="bulk-hint">勾選項目後:</span>

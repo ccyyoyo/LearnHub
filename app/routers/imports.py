@@ -12,6 +12,7 @@ from sqlmodel import Session, select
 
 from ..db import get_session
 from ..models import Item, Resource, Subject
+from ..services import normalize_progress_mode
 from ..templating import templates
 from ..youtube import YouTubeClient, YouTubeError, parse_youtube_url
 
@@ -23,6 +24,7 @@ async def import_resource(
     request: Request,
     subject_id: int = Form(...),
     url: str = Form(...),
+    progress: str = Form("count"),
     session: Session = Depends(get_session),
     client: YouTubeClient = Depends(YouTubeClient),
 ):
@@ -66,6 +68,7 @@ async def import_resource(
                 video_id=video.video_id,
                 title=video.title,
                 thumbnail_url=video.thumbnail_url,
+                duration_seconds=video.duration_seconds,
                 position=video.position,
             )
         )
@@ -84,6 +87,7 @@ async def import_resource(
             "total": len(videos),
             "resources": sorted(subject.resources, key=lambda r: r.created_at),
             "filter_item": lambda it: True,
+            "progress_mode": normalize_progress_mode(progress),
         },
     )
 

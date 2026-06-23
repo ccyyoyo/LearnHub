@@ -10,11 +10,35 @@ from dataclasses import dataclass
 
 from .models import Item, ItemStatus, Resource
 
+# Progress can be measured two ways (user's choice in the toolbar): by number of
+# videos finished, or by watch-time finished. "count" stays the default.
+PROGRESS_MODES = ("count", "time")
+DEFAULT_PROGRESS_MODE = "count"
+
+
+def normalize_progress_mode(mode: str | None) -> str:
+    return mode if mode in PROGRESS_MODES else DEFAULT_PROGRESS_MODE
+
+
+def format_duration(seconds: int | None) -> str:
+    """Render seconds as a clock string: ``12:34`` or ``1:02:03``."""
+    total = int(seconds or 0)
+    hours, rem = divmod(total, 3600)
+    minutes, secs = divmod(rem, 60)
+    if hours:
+        return f"{hours}:{minutes:02d}:{secs:02d}"
+    return f"{minutes}:{secs:02d}"
+
+
+def _seconds(item: Item) -> int:
+    return item.duration_seconds or 0
+
 
 @dataclass(frozen=True)
 class Progress:
-    done: int
+    done: int  # count of finished videos, or finished seconds, per ``mode``
     total: int
+    mode: str = DEFAULT_PROGRESS_MODE
 
     @property
     def percent(self) -> int:
@@ -22,15 +46,37 @@ class Progress:
             return 0
         return round(self.done / self.total * 100)
 
+    @property
+    def label(self) -> str:
+        """Human label for the progress bar, in the units of the active mode."""
+        if self.mode == "time":
+            return f"{format_duration(self.done)} / {format_duration(self.total)}"
+        return f"{self.done}/{self.total}"
 
-def item_progress(items: list[Item]) -> Progress:
+
+def count_progress(items: list[Item]) -> Progress:
     total = len(items)
     done = sum(1 for it in items if it.status is ItemStatus.done)
-    return Progress(done=done, total=total)
+    return Progress(done=done, total=total, mode="count")
 
 
-def resource_progress(resource: Resource) -> Progress:
-    return item_progress(list(resource.items))
+def time_progress(items: list[Item]) -> Progress:
+    total = sum(_seconds(it) for it in items)
+    done = sum(_seconds(it) for it in items if it.status is ItemStatus.done)
+    return Progress(done=done, total=total, mode="time")
+
+
+def item_progress(items: list[Item], mode: str = DEFAULT_PROGRESS_MODE) -> Progress:
+    return time_progress(items) if mode == "time" else count_progress(items)
+
+
+def resource_progress(resource: Resource, mode: str = DEFAULT_PROGRESS_MODE) -> Progress:
+    return item_progress(list(resource.items), mode)
+
+
+def resource_total_seconds(resource: Resource) -> int:
+    """Total watch-time of a resource (shown regardless of progress mode)."""
+    return sum(_seconds(it) for it in resource.items)
 
 
 # Status cycle used by the one-click toggle (FR-3.1):

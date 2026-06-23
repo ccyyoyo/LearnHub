@@ -1,5 +1,5 @@
-{% set p = resource_progress(resource) %}
+{% set p = resource_progress(resource, progress_mode) %}
 <div class="progress" id="progress-{{ resource.id }}"{% if with_oob_progress %} hx-swap-oob="true"{% endif %}>
   <div class="bar"><span style="width: {{ p.percent }}%"></span></div>
-  <span class="progress-label">{{ p.done }}/{{ p.total }} · {{ p.percent }}%</span>
+  <span class="progress-label">{{ p.label }} · {{ p.percent }}%</span>
 </div>

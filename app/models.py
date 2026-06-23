@@ -79,6 +79,7 @@ class Item(SQLModel, table=True):
     video_id: str = Field(index=True)
     title: str
     thumbnail_url: Optional[str] = None
+    duration_seconds: Optional[int] = None  # video length in seconds (None if unknown)
     position: int = 0
     status: ItemStatus = Field(default=ItemStatus.not_started)
     note_md: Optional[str] = None  # Phase 2

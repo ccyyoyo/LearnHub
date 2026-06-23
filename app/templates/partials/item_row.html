@@ -10,11 +10,14 @@
   <a href="{{ item.youtube_url }}" target="_blank" rel="noopener" class="item-title">
     {{ item.title }}
   </a>
+  {% if item.duration_seconds %}
+  <span class="duration" title="影片長度">{{ format_duration(item.duration_seconds) }}</span>
+  {% endif %}
   {% if edit %}
   <span class="status-badge status-{{ item.status.value }}">{{ STATUS_LABELS[item.status] }}</span>
   {% else %}
   <button class="status-btn status-{{ item.status.value }}"
-          hx-post="/items/{{ item.id }}/cycle"
+          hx-post="/items/{{ item.id }}/cycle?progress={{ progress_mode }}"
           hx-target="#item-{{ item.id }}"
           hx-swap="outerHTML"
           title="點一下切換狀態">

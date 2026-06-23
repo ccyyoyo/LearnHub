@@ -8,6 +8,7 @@ from sqlmodel import Session, select
 
 from ..db import get_session
 from ..models import Item, ItemStatus, Resource, Subject, utcnow
+from ..services import normalize_progress_mode
 from ..templating import templates
 
 router = APIRouter()
@@ -34,7 +35,9 @@ def _normalize_filter(filter: str) -> str:
     return filter if filter in {"all", "in_progress", "incomplete"} else "all"
 
 
-def _subject_context(subject: Subject, filter: str, edit: bool) -> dict:
+def _subject_context(
+    subject: Subject, filter: str, edit: bool, progress: str = "count"
+) -> dict:
     """Context shared by the subject page and the resources partial."""
     return {
         "subject": subject,
@@ -42,15 +45,18 @@ def _subject_context(subject: Subject, filter: str, edit: bool) -> dict:
         "filter": filter,
         "filter_item": _filter_predicate(filter),
         "edit": edit,
+        "progress_mode": normalize_progress_mode(progress),
     }
 
 
 def _render_resources(
-    request: Request, subject: Subject, filter: str, edit: bool
+    request: Request, subject: Subject, filter: str, edit: bool, progress: str = "count"
 ) -> HTMLResponse:
-    """Re-render just the resources list, preserving filter + edit state."""
+    """Re-render just the resources list, preserving filter + edit + progress state."""
     return templates.TemplateResponse(
-        request, "partials/resources.html", _subject_context(subject, filter, edit)
+        request,
+        "partials/resources.html",
+        _subject_context(subject, filter, edit, progress),
     )
 
 
@@ -171,6 +177,7 @@ def subject_detail(
     request: Request,
     filter: str = "all",
     edit: bool = False,
+    progress: str = "count",
     session: Session = Depends(get_session),
 ):
     """Subject detail: resources, completion, status filter, and edit mode (FR-4.2)."""
@@ -178,7 +185,9 @@ def subject_detail(
     if not subject:
         raise HTTPException(404, "Subject not found")
     return templates.TemplateResponse(
-        request, "subject.html", _subject_context(subject, _normalize_filter(filter), edit)
+        request,
+        "subject.html",
+        _subject_context(subject, _normalize_filter(filter), edit, progress),
     )
 
 
@@ -190,6 +199,7 @@ def bulk_status(
     status: str = Form(...),
     filter: str = Form("all"),
     edit: bool = Form(True),
+    progress: str = Form("count"),
     session: Session = Depends(get_session),
 ):
     """Set the same status on every selected item (edit mode bulk action)."""
@@ -206,7 +216,7 @@ def bulk_status(
         session.add(item)
     session.commit()
     session.refresh(subject)
-    return _render_resources(request, subject, _normalize_filter(filter), edit)
+    return _render_resources(request, subject, _normalize_filter(filter), edit, progress)
 
 
 @router.post("/subjects/{subject_id}/items/bulk-delete", response_class=HTMLResponse)
@@ -216,6 +226,7 @@ def bulk_delete(
     item_ids: list[int] = Form(default=[]),
     filter: str = Form("all"),
     edit: bool = Form(True),
+    progress: str = Form("count"),
     session: Session = Depends(get_session),
 ):
     """Delete every selected item (edit mode bulk action)."""
@@ -226,7 +237,7 @@ def bulk_delete(
         session.delete(item)
     session.commit()
     session.refresh(subject)
-    return _render_resources(request, subject, _normalize_filter(filter), edit)
+    return _render_resources(request, subject, _normalize_filter(filter), edit, progress)
 
 
 @router.delete(
@@ -238,6 +249,7 @@ def delete_resource(
     request: Request,
     filter: str = "all",
     edit: bool = True,
+    progress: str = "count",
     session: Session = Depends(get_session),
 ):
     """Delete a whole resource and its items (edit mode)."""
@@ -249,4 +261,4 @@ def delete_resource(
         session.delete(resource)
         session.commit()
         session.refresh(subject)
-    return _render_resources(request, subject, _normalize_filter(filter), edit)
+    return _render_resources(request, subject, _normalize_filter(filter), edit, progress)

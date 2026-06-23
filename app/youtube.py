@@ -7,7 +7,8 @@ playlists/videos — no OAuth (R1).
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+import re
+from dataclasses import dataclass, replace
 from urllib.parse import parse_qs, urlparse
 
 import httpx
@@ -16,7 +17,30 @@ from .config import get_settings
 from .models import ResourceType
 
 API_BASE = "https://www.googleapis.com/youtube/v3"
-_MAX_RESULTS = 50  # API maximum per page.
+_MAX_RESULTS = 50  # API maximum per page (and per videos.list id batch).
+
+# YouTube returns durations as ISO 8601 (e.g. "PT4M13S", "PT1H2M3S", "P0D" for
+# live streams). We only ever see days/hours/minutes/seconds in practice.
+_DURATION_RE = re.compile(
+    r"^P(?:(?P<days>\d+)D)?"
+    r"(?:T(?:(?P<hours>\d+)H)?(?:(?P<minutes>\d+)M)?(?:(?P<seconds>\d+)S)?)?$"
+)
+
+
+def parse_iso8601_duration(value: str | None) -> int | None:
+    """Convert an ISO 8601 duration to whole seconds (``None`` if unparseable)."""
+    if not value:
+        return None
+    match = _DURATION_RE.fullmatch(value)
+    if not match:
+        return None
+    parts = {k: int(v) for k, v in match.groupdict(default="0").items()}
+    return (
+        parts["days"] * 86400
+        + parts["hours"] * 3600
+        + parts["minutes"] * 60
+        + parts["seconds"]
+    )
 
 
 class YouTubeError(Exception):
@@ -35,6 +59,7 @@ class VideoData:
     title: str
     thumbnail_url: str | None
     position: int
+    duration_seconds: int | None = None
 
 
 def parse_youtube_url(url: str) -> ParsedUrl:
@@ -130,6 +155,28 @@ class YouTubeClient:
             raise YouTubeError("找不到這個播放清單(可能是私人或不存在)。")
         return items[0]["snippet"].get("title", playlist_id)
 
+    async def _fetch_durations(
+        self, client: httpx.AsyncClient, video_ids: list[str]
+    ) -> dict[str, int | None]:
+        """Look up each video's length via videos.list, batched 50 ids at a time.
+
+        ``playlistItems`` doesn't carry the video duration, so playlist imports
+        need this second call to know how long each video is (used for the
+        time-based progress mode).
+        """
+        durations: dict[str, int | None] = {}
+        for start in range(0, len(video_ids), _MAX_RESULTS):
+            chunk = video_ids[start : start + _MAX_RESULTS]
+            data = await self._get(
+                client,
+                "videos",
+                {"part": "contentDetails", "id": ",".join(chunk), "maxResults": _MAX_RESULTS},
+            )
+            for entry in data.get("items", []):
+                content = entry.get("contentDetails", {}) or {}
+                durations[entry["id"]] = parse_iso8601_duration(content.get("duration"))
+        return durations
+
     async def fetch_playlist_items(
         self, client: httpx.AsyncClient, playlist_id: str
     ) -> list[VideoData]:
@@ -172,23 +219,32 @@ class YouTubeClient:
             page_token = data.get("nextPageToken")
             if not page_token:
                 break
-        return videos
+
+        durations = await self._fetch_durations(client, [v.video_id for v in videos])
+        return [
+            replace(v, duration_seconds=durations.get(v.video_id))
+            for v in videos
+        ]
 
     async def fetch_video(
         self, client: httpx.AsyncClient, video_id: str
     ) -> VideoData:
         data = await self._get(
-            client, "videos", {"part": "snippet", "id": video_id, "maxResults": 1}
+            client,
+            "videos",
+            {"part": "snippet,contentDetails", "id": video_id, "maxResults": 1},
         )
         items = data.get("items") or []
         if not items:
             raise YouTubeError("找不到這支影片(可能是私人或不存在)。")
         snippet = items[0]["snippet"]
+        content = items[0].get("contentDetails", {}) or {}
         return VideoData(
             video_id=video_id,
             title=snippet.get("title", video_id),
             thumbnail_url=_thumbnail(snippet),
             position=0,
+            duration_seconds=parse_iso8601_duration(content.get("duration")),
         )
 
     async def fetch(self, parsed: ParsedUrl) -> tuple[str, list[VideoData]]:

@@ -78,6 +78,59 @@ def test_status_cycle_and_progress(client):
     assert "33%" in page
 
 
+def test_duration_badges_and_total(client):
+    _create_subject(client)
+    sid = _subject_id(client)
+    client.post(
+        "/import",
+        data={"subject_id": sid, "url": "https://www.youtube.com/playlist?list=PLtest"},
+    )
+    page = client.get(f"/subjects/{sid}").text
+    # Per-video durations (100 / 200 / 300s -> clock format).
+    assert "1:40" in page
+    assert "3:20" in page
+    assert "5:00" in page
+    # Resource total (600s) shown on the header.
+    assert "10:00" in page
+
+
+def test_progress_mode_count_vs_time(client):
+    _create_subject(client)
+    sid = _subject_id(client)
+    client.post(
+        "/import",
+        data={"subject_id": sid, "url": "https://www.youtube.com/playlist?list=PLtest"},
+    )
+    import re
+
+    page = client.get(f"/subjects/{sid}").text
+    item_ids = [int(x) for x in re.findall(r'id="item-(\d+)"', page)]
+    assert len(item_ids) == 3
+
+    # Items are ordered by position: the third is the 300s (5:00) video.
+    client.post(f"/items/{item_ids[2]}/cycle?progress=time")  # -> in_progress
+    r = client.post(f"/items/{item_ids[2]}/cycle?progress=time")  # -> done
+    # OOB progress fragment comes back measured in watch-time.
+    assert "5:00 / 10:00" in r.text
+
+    # Time mode: 300/600s done -> 50%.
+    time_page = client.get(f"/subjects/{sid}?progress=time").text
+    assert "5:00 / 10:00" in time_page
+    assert "50%" in time_page
+
+    # Count mode: 1 of 3 videos done.
+    count_page = client.get(f"/subjects/{sid}?progress=count").text
+    assert "1/3" in count_page
+
+
+def test_progress_toggle_present(client):
+    sid = _imported_subject(client)
+    page = client.get(f"/subjects/{sid}").text
+    assert "依數量" in page
+    assert "依時間" in page
+    assert "progress=time" in page
+
+
 def test_import_bad_url_shows_error(client):
     _create_subject(client)
     sid = _subject_id(client)

@@ -2,6 +2,7 @@
 
 from collections.abc import Iterator
 
+from sqlalchemy import inspect, text
 from sqlmodel import Session, SQLModel, create_engine
 
 from .config import get_settings
@@ -27,6 +28,23 @@ def init_db() -> None:
     from . import models  # noqa: F401
 
     SQLModel.metadata.create_all(engine)
+    _ensure_columns()
+
+
+def _ensure_columns() -> None:
+    """Add columns introduced after a DB was first created.
+
+    ``create_all`` never alters an existing table, so a pre-existing
+    ``learnhub.db`` would otherwise be missing newer nullable columns. We patch
+    them in by hand (still no Alembic — see ``init_db``).
+    """
+    inspector = inspect(engine)
+    if "item" not in inspector.get_table_names():
+        return
+    columns = {col["name"] for col in inspector.get_columns("item")}
+    if "duration_seconds" not in columns:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE item ADD COLUMN duration_seconds INTEGER"))
 
 
 def get_session() -> Iterator[Session]:

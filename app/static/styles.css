@@ -124,6 +124,7 @@ button:disabled { opacity: .6; cursor: progress; }
 .badge-video { background: #fdf2f8; color: #9d174d; }
 .resource-title { font-weight: 600; text-decoration: none; color: var(--ink); }
 .resource-title:hover { color: var(--brand); }
+.resource-duration { color: var(--muted); font-size: .82rem; white-space: nowrap; }
 
 /* Progress */
 .progress { display: flex; align-items: center; gap: 8px; min-width: 180px; }
@@ -142,6 +143,10 @@ button:disabled { opacity: .6; cursor: progress; }
 .thumb img { width: 120px; height: 68px; object-fit: cover; border-radius: 6px; display: block; }
 .item-title { flex: 1; text-decoration: none; color: var(--ink); font-size: .95rem; min-width: 0; }
 .item-title:hover { color: var(--brand); }
+.duration {
+  flex: 0 0 auto; font-size: .78rem; color: var(--muted); white-space: nowrap;
+  background: #f3f4f6; padding: 2px 8px; border-radius: 6px; font-variant-numeric: tabular-nums;
+}
 
 .status-btn { color: #fff; min-width: 72px; }
 .status-btn.status-not_started { background: var(--not-started); }

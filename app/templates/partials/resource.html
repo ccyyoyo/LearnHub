@@ -7,12 +7,16 @@
       <a class="resource-title" href="{{ resource.source_url }}" target="_blank" rel="noopener">
         {{ resource.title }}
       </a>
+      {% set total_secs = resource_total_seconds(resource) %}
+      {% if total_secs %}
+      <span class="resource-duration" title="總時長">⏱ {{ format_duration(total_secs) }}</span>
+      {% endif %}
     </div>
     <div class="resource-aside">
       {% include "partials/progress.html" %}
       {% if edit %}
       <button class="link-danger"
-              hx-delete="/subjects/{{ subject.id }}/resources/{{ resource.id }}?filter={{ filter }}&edit=1"
+              hx-delete="/subjects/{{ subject.id }}/resources/{{ resource.id }}?filter={{ filter }}&progress={{ progress_mode }}&edit=1"
               hx-target="#resources-container"
               hx-swap="innerHTML"
               hx-confirm="確定刪除整個資源「{{ resource.title }}」及其所有項目?">刪除資源</button>

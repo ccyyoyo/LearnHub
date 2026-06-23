@@ -3,7 +3,7 @@
 import pytest
 
 from app.models import ResourceType
-from app.youtube import YouTubeError, parse_youtube_url
+from app.youtube import YouTubeError, parse_iso8601_duration, parse_youtube_url
 
 
 @pytest.mark.parametrize(
@@ -49,3 +49,21 @@ def test_parse_video(url, expected_id):
 def test_parse_rejects(url):
     with pytest.raises(YouTubeError):
         parse_youtube_url(url)
+
+
+@pytest.mark.parametrize(
+    "value,expected",
+    [
+        ("PT4M13S", 253),
+        ("PT1H2M3S", 3723),
+        ("PT45S", 45),
+        ("PT2H", 7200),
+        ("PT0S", 0),
+        ("P0D", 0),  # live streams report zero duration
+        ("", None),
+        (None, None),
+        ("garbage", None),
+    ],
+)
+def test_parse_iso8601_duration(value, expected):
+    assert parse_iso8601_duration(value) == expected
