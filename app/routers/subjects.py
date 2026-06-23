@@ -10,6 +10,7 @@ from ..db import get_session
 from ..models import Item, ItemStatus, Resource, Subject, utcnow
 from ..services import normalize_progress_mode
 from ..templating import templates
+from ..youtube import YouTubeClient, YouTubeError
 
 router = APIRouter()
 
@@ -262,3 +263,54 @@ def delete_resource(
         session.commit()
         session.refresh(subject)
     return _render_resources(request, subject, _normalize_filter(filter), edit, progress)
+
+
+@router.post(
+    "/subjects/{subject_id}/resources/{resource_id}/refresh-durations",
+    response_class=HTMLResponse,
+)
+async def refresh_durations(
+    subject_id: int,
+    resource_id: int,
+    request: Request,
+    filter: str = Form("all"),
+    edit: bool = Form(False),
+    progress: str = Form("count"),
+    session: Session = Depends(get_session),
+    client: YouTubeClient = Depends(YouTubeClient),
+):
+    """Re-fetch each video's length from YouTube and update the stored items.
+
+    Returns a flash plus an out-of-band swap of the resources list (same shape
+    as an import), so durations/totals refresh in place. On API failure we only
+    swap in an error flash, leaving the resources untouched.
+    """
+    subject = session.get(Subject, subject_id)
+    resource = session.get(Resource, resource_id)
+    if not subject or not resource or resource.subject_id != subject_id:
+        return templates.TemplateResponse(
+            request,
+            "partials/import_error.html",
+            {"message": "找不到資源,請重新整理頁面。"},
+        )
+
+    try:
+        durations = await client.fetch_durations([it.video_id for it in resource.items])
+    except YouTubeError as exc:
+        return templates.TemplateResponse(
+            request, "partials/import_error.html", {"message": str(exc)}
+        )
+
+    updated = 0
+    for item in resource.items:
+        new_seconds = durations.get(item.video_id)
+        if new_seconds is not None and new_seconds != item.duration_seconds:
+            item.duration_seconds = new_seconds
+            session.add(item)
+            updated += 1
+    session.commit()
+    session.refresh(subject)
+
+    context = _subject_context(subject, _normalize_filter(filter), edit, progress)
+    context.update({"resource": resource, "updated": updated})
+    return templates.TemplateResponse(request, "partials/refresh_result.html", context)

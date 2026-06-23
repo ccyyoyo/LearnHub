@@ -29,10 +29,10 @@
     <a href="?filter=in_progress&progress={{ progress_mode }}{% if edit %}&edit=1{% endif %}" class="filter {{ 'active' if filter == 'in_progress' }}">進行中</a>
     <a href="?filter=incomplete&progress={{ progress_mode }}{% if edit %}&edit=1{% endif %}" class="filter {{ 'active' if filter == 'incomplete' }}">未完成</a>
   </nav>
-  <nav class="filters">
-    <span class="filters-label">進度:</span>
-    <a href="?filter={{ filter }}&progress=count{% if edit %}&edit=1{% endif %}" class="filter {{ 'active' if progress_mode == 'count' }}">依數量</a>
-    <a href="?filter={{ filter }}&progress=time{% if edit %}&edit=1{% endif %}" class="filter {{ 'active' if progress_mode == 'time' }}">依時間</a>
+  <nav class="filters progress-toggle">
+    <span class="filters-label">進度顯示:</span>
+    <a href="?filter={{ filter }}&progress=count{% if edit %}&edit=1{% endif %}" class="seg {{ 'active' if progress_mode == 'count' }}">依數量</a>
+    <a href="?filter={{ filter }}&progress=time{% if edit %}&edit=1{% endif %}" class="seg {{ 'active' if progress_mode == 'time' }}">依時間</a>
   </nav>
   {% if edit %}
   <a class="btn-toggle active" href="?filter={{ filter }}&progress={{ progress_mode }}">完成編輯</a>

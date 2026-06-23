@@ -1,0 +1,6 @@
+<div class="flash flash-ok">
+  ✅ 已重新整理「{{ resource.title }}」的時長{% if updated %}(更新 {{ updated }} 支){% else %}(沒有變動){% endif %}。
+</div>
+<div id="resources-container" hx-swap-oob="true">
+  {% include "partials/resources.html" %}
+</div>

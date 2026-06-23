@@ -259,3 +259,16 @@ class YouTubeClient:
                 return title, videos
             video = await self.fetch_video(client, parsed.id)
             return video.title, [video]
+
+    async def fetch_durations(self, video_ids: list[str]) -> dict[str, int | None]:
+        """Re-query durations for a set of videos (used by the refresh action).
+
+        Returns a ``video_id -> seconds`` map; ids the API doesn't return (e.g.
+        a video gone private) are simply absent so callers can leave them alone.
+        """
+        self._require_key()
+        unique = list(dict.fromkeys(vid for vid in video_ids if vid))
+        if not unique:
+            return {}
+        async with httpx.AsyncClient() as client:
+            return await self._fetch_durations(client, unique)

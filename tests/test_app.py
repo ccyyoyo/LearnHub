@@ -131,6 +131,36 @@ def test_progress_toggle_present(client):
     assert "progress=time" in page
 
 
+def test_refresh_button_present(client):
+    sid = _imported_subject(client)
+    page = client.get(f"/subjects/{sid}").text
+    assert "refresh-durations" in page
+
+
+def test_refresh_durations_updates_items(client):
+    _create_subject(client)
+    sid = _subject_id(client)
+    client.post(
+        "/import",
+        data={"subject_id": sid, "url": "https://www.youtube.com/playlist?list=PLtest"},
+    )
+    import re
+
+    page = client.get(f"/subjects/{sid}").text
+    rid = int(re.search(r'id="resource-(\d+)"', page).group(1))
+    assert "10:00" in page  # total before refresh (100+200+300s)
+
+    r = client.post(
+        f"/subjects/{sid}/resources/{rid}/refresh-durations",
+        data={"filter": "all", "edit": "0", "progress": "count"},
+    )
+    assert r.status_code == 200
+    assert "重新整理" in r.text  # success flash
+    # Fake client reports every video as 300s -> total 900s = 15:00.
+    assert "15:00" in r.text
+    assert "15:00" in client.get(f"/subjects/{sid}").text
+
+
 def test_import_bad_url_shows_error(client):
     _create_subject(client)
     sid = _subject_id(client)

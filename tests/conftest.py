@@ -36,6 +36,10 @@ class FakeYouTubeClient:
             return "測試清單", list(self.playlist)
         return "單支影片", [VideoData(parsed.id, "單支影片", None, 0, duration_seconds=90)]
 
+    async def fetch_durations(self, video_ids):
+        # Pretend every video is now 5 minutes long (used by the refresh test).
+        return {vid: 300 for vid in video_ids}
+
 
 @pytest.fixture
 def client(engine):

@@ -14,6 +14,13 @@
     </div>
     <div class="resource-aside">
       {% include "partials/progress.html" %}
+      <button class="link-refresh"
+              hx-post="/subjects/{{ subject.id }}/resources/{{ resource.id }}/refresh-durations"
+              hx-vals='{"filter": "{{ filter }}", "edit": "{{ 1 if edit else 0 }}", "progress": "{{ progress_mode }}"}'
+              hx-target="#import-feedback"
+              hx-swap="innerHTML"
+              hx-indicator="#import-spinner"
+              title="重新向 YouTube 抓取每支影片的長度">↻ 時長</button>
       {% if edit %}
       <button class="link-danger"
               hx-delete="/subjects/{{ subject.id }}/resources/{{ resource.id }}?filter={{ filter }}&progress={{ progress_mode }}&edit=1"

@@ -104,6 +104,16 @@ button:disabled { opacity: .6; cursor: progress; }
 }
 .filter.active { background: var(--brand); color: #fff; border-color: var(--brand); }
 
+/* Progress-mode segmented control — visually distinct from the view filters. */
+.progress-toggle { gap: 0; padding: 3px; background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 999px; }
+.progress-toggle .filters-label { color: var(--brand-dark); font-weight: 600; padding: 0 8px 0 6px; }
+.progress-toggle .seg {
+  text-decoration: none; color: var(--brand-dark); font-size: .85rem; font-weight: 600;
+  padding: 5px 14px; border-radius: 999px; background: transparent;
+}
+.progress-toggle .seg:hover { background: #e0e7ff; }
+.progress-toggle .seg.active { background: var(--brand); color: #fff; }
+
 /* Resource */
 .resource {
   background: var(--panel);
@@ -194,8 +204,12 @@ button:disabled { opacity: .6; cursor: progress; }
 .btn-danger { background: var(--warn); color: #fff; padding: 8px 14px; }
 .btn-danger:hover { background: #991b1b; }
 
-/* Resource aside (progress + delete) + item checkbox / read-only status */
+/* Resource aside (progress + refresh + delete) + item checkbox / read-only status */
 .resource-aside { display: flex; align-items: center; gap: 12px; }
+.link-refresh {
+  background: none; color: var(--brand); padding: 4px 8px; font-weight: 500; font-size: .82rem; white-space: nowrap;
+}
+.link-refresh:hover { background: #eef2ff; }
 .item-check { width: 18px; height: 18px; flex: 0 0 auto; accent-color: var(--brand); cursor: pointer; }
 .status-badge {
   min-width: 72px; text-align: center; color: #fff; font-size: .92rem; font-weight: 600;

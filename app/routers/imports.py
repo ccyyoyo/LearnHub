@@ -82,11 +82,14 @@ async def import_resource(
         request,
         "partials/import_result.html",
         {
+            "subject": subject,
             "resource": resource,
             "added": added,
             "total": len(videos),
             "resources": sorted(subject.resources, key=lambda r: r.created_at),
             "filter_item": lambda it: True,
+            "filter": "all",
+            "edit": False,
             "progress_mode": normalize_progress_mode(progress),
         },
     )
