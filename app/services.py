@@ -10,14 +10,19 @@ from dataclasses import dataclass
 
 from .models import Item, ItemStatus, Resource, Subject
 
+ITEM_SORTS = {
+    "original",
+    "incomplete_first",
+    "duration_asc",
+    "duration_desc",
+    "title_asc",
+    "title_desc",
+}
+
 # Progress can be measured two ways (user's choice in the toolbar): by number of
 # videos finished, or by watch-time finished. "count" stays the default.
 PROGRESS_MODES = ("count", "time")
 DEFAULT_PROGRESS_MODE = "count"
-
-
-def normalize_progress_mode(mode: str | None) -> str:
-    return mode if mode in PROGRESS_MODES else DEFAULT_PROGRESS_MODE
 
 
 def format_duration(seconds: int | None) -> str:
@@ -28,6 +33,32 @@ def format_duration(seconds: int | None) -> str:
     if hours:
         return f"{hours}:{minutes:02d}:{secs:02d}"
     return f"{minutes}:{secs:02d}"
+
+
+def normalize_item_sort(sort: str) -> str:
+    return sort if sort in ITEM_SORTS else "original"
+
+
+def sort_items(items: list[Item], sort: str) -> list[Item]:
+    sort = normalize_item_sort(sort)
+    items_by_position = sorted(items, key=lambda it: it.position)
+    if sort == "incomplete_first":
+        return sorted(items_by_position, key=lambda it: it.status is ItemStatus.done)
+    if sort == "duration_asc":
+        return sorted(
+            items_by_position,
+            key=lambda it: (it.duration_seconds is None, it.duration_seconds or 0),
+        )
+    if sort == "duration_desc":
+        return sorted(
+            items_by_position,
+            key=lambda it: (it.duration_seconds is None, -(it.duration_seconds or 0)),
+        )
+    if sort == "title_asc":
+        return sorted(items_by_position, key=lambda it: it.title.casefold())
+    if sort == "title_desc":
+        return sorted(items_by_position, key=lambda it: it.title.casefold(), reverse=True)
+    return items_by_position
 
 
 def _seconds(item: Item) -> int:
@@ -79,16 +110,29 @@ def resource_total_seconds(resource: Resource) -> int:
     return sum(_seconds(it) for it in resource.items)
 
 
-def subject_progress(subject: Subject) -> Progress:
+@dataclass(frozen=True)
+class ProgressPair:
+    """Both progress readings for one item set, so the UI can switch modes
+    client-side without re-querying the server."""
+
+    count: Progress
+    time: Progress
+
+
+def progress_pair(items: list[Item]) -> ProgressPair:
+    return ProgressPair(count=count_progress(items), time=time_progress(items))
+
+
+def subject_progress(subject: Subject) -> ProgressPair:
     """Completion across every item in every resource under a subject."""
     items = [it for res in subject.resources for it in res.items]
-    return item_progress(items)
+    return progress_pair(items)
 
 
-def overall_progress(subjects: list[Subject]) -> Progress:
+def overall_progress(subjects: list[Subject]) -> ProgressPair:
     """Completion across every item the learner has, used on the landing page."""
     items = [it for sub in subjects for res in sub.resources for it in res.items]
-    return item_progress(items)
+    return progress_pair(items)
 
 
 # Status cycle used by the one-click toggle (FR-3.1):

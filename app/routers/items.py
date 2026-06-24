@@ -8,19 +8,19 @@ from sqlmodel import Session
 
 from ..db import get_session
 from ..models import Item, ItemStatus, utcnow
-from ..services import next_status, normalize_progress_mode, subject_progress
+from ..services import next_status, subject_progress
 from ..templating import templates
 
 router = APIRouter(prefix="/items")
 
 
-def _render(request: Request, item: Item, progress: str = "count") -> HTMLResponse:
+def _render(request: Request, item: Item) -> HTMLResponse:
     """Return the swapped item row plus an out-of-band resource progress bar.
 
     HTMX swaps the row in place, and the OOB fragments update both the parent
     resource's completion and the floating subject-progress widget (x/y + %)
-    without a full reload (FR-3.2). ``progress`` keeps the re-rendered bar in
-    whichever mode (count / time) the user is viewing.
+    without a full reload (FR-3.2). Each bar renders both count and time
+    readings; the active mode is picked client-side.
     """
     subject = item.resource.subject
     return templates.TemplateResponse(
@@ -30,7 +30,6 @@ def _render(request: Request, item: Item, progress: str = "count") -> HTMLRespon
             "item": item,
             "resource": item.resource,
             "with_oob_progress": True,
-            "progress_mode": normalize_progress_mode(progress),
             "with_oob_floating": True,
             "fp": subject_progress(subject),
             "floating_progress_title": subject.name,
@@ -42,7 +41,6 @@ def _render(request: Request, item: Item, progress: str = "count") -> HTMLRespon
 def cycle_status(
     item_id: int,
     request: Request,
-    progress: str = "count",
     session: Session = Depends(get_session),
 ):
     """One-click cycle: not_started → in_progress → done → not_started."""
@@ -54,7 +52,7 @@ def cycle_status(
     session.add(item)
     session.commit()
     session.refresh(item)
-    return _render(request, item, progress)
+    return _render(request, item)
 
 
 @router.post("/{item_id}/status", response_class=HTMLResponse)
@@ -62,7 +60,6 @@ def set_status(
     item_id: int,
     request: Request,
     status: str = Form(...),
-    progress: str = Form("count"),
     session: Session = Depends(get_session),
 ):
     """Set an explicit status value (FR-3.1)."""
@@ -77,4 +74,4 @@ def set_status(
     session.add(item)
     session.commit()
     session.refresh(item)
-    return _render(request, item, progress)
+    return _render(request, item)

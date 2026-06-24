@@ -1,20 +1,41 @@
 {# Floating bottom-right progress widget. Always renders the #floating-progress
    element so out-of-band swaps always have a target; visually hidden when there
-   are no items to track. Set `floating_oob` truthy to emit hx-swap-oob. #}
+   are no items to track. Set `floating_oob` truthy to emit hx-swap-oob.
+   The card renders both count (front) and time (back) faces; clicking it flips
+   the global progress mode (handled client-side in base.html). #}
 {% set _fp = fp if (fp is defined and fp) else None %}
-{% set _has = _fp and _fp.total > 0 %}
-<aside class="floating-progress{% if not _has %} is-empty{% endif %}{% if _has and _fp.percent == 100 %} is-complete{% endif %}"
+{% set _has = _fp and _fp.count.total > 0 %}
+<aside class="floating-progress{% if not _has %} is-empty{% endif %}"
        id="floating-progress"
        {% if floating_oob %}hx-swap-oob="true"{% endif %}
        aria-label="學習進度">
   {% if _has %}
-  <div class="fp-head">
-    <span class="fp-title" title="{{ floating_progress_title }}">{{ floating_progress_title }}</span>
-    <span class="fp-count">{{ _fp.done }}/{{ _fp.total }}</span>
-  </div>
-  <div class="fp-row">
-    <div class="fp-bar"><span style="width: {{ _fp.percent }}%"></span></div>
-    <span class="fp-percent">{{ _fp.percent }}%</span>
-  </div>
+  <button type="button" class="fp-card" data-progress-toggle
+          title="點一下切換:依數量 / 依時間" aria-label="切換進度顯示方式">
+    <span class="fp-stage">
+    <span class="fp-inner">
+      <span class="fp-face fp-front{% if _fp.count.percent == 100 %} is-complete{% endif %}">
+        <span class="fp-head">
+          <span class="fp-title" title="{{ floating_progress_title }}">{{ floating_progress_title }}</span>
+          <span class="fp-count">{{ _fp.count.label }}</span>
+        </span>
+        <span class="fp-row">
+          <span class="fp-bar"><span style="width: {{ _fp.count.percent }}%"></span></span>
+          <span class="fp-percent">{{ _fp.count.percent }}%</span>
+        </span>
+      </span>
+      <span class="fp-face fp-back{% if _fp.time.percent == 100 %} is-complete{% endif %}">
+        <span class="fp-head">
+          <span class="fp-title" title="{{ floating_progress_title }}">{{ floating_progress_title }}</span>
+          <span class="fp-count">{{ _fp.time.label }}</span>
+        </span>
+        <span class="fp-row">
+          <span class="fp-bar"><span style="width: {{ _fp.time.percent }}%"></span></span>
+          <span class="fp-percent">{{ _fp.time.percent }}%</span>
+        </span>
+      </span>
+    </span>
+    </span>
+  </button>
   {% endif %}
 </aside>

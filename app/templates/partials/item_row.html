@@ -17,7 +17,7 @@
   <span class="status-badge status-{{ item.status.value }}">{{ STATUS_LABELS[item.status] }}</span>
   {% else %}
   <button class="status-btn status-{{ item.status.value }}"
-          hx-post="/items/{{ item.id }}/cycle?progress={{ progress_mode }}"
+          hx-post="/items/{{ item.id }}/cycle"
           hx-target="#item-{{ item.id }}"
           hx-swap="outerHTML"
           title="點一下切換狀態">

@@ -14,16 +14,16 @@
     </div>
     <div class="resource-aside">
       {% include "partials/progress.html" %}
+      {% if edit %}
       <button class="link-refresh"
               hx-post="/subjects/{{ subject.id }}/resources/{{ resource.id }}/refresh-durations"
-              hx-vals='{"filter": "{{ filter }}", "edit": "{{ 1 if edit else 0 }}", "progress": "{{ progress_mode }}"}'
+              hx-vals='{"filter": "{{ filter }}", "sort": "{{ sort }}", "edit": "1"}'
               hx-target="#import-feedback"
               hx-swap="innerHTML"
               hx-indicator="#import-spinner"
               title="重新向 YouTube 抓取每支影片的長度">↻ 時長</button>
-      {% if edit %}
       <button class="link-danger"
-              hx-delete="/subjects/{{ subject.id }}/resources/{{ resource.id }}?filter={{ filter }}&progress={{ progress_mode }}&edit=1"
+              hx-delete="/subjects/{{ subject.id }}/resources/{{ resource.id }}?filter={{ filter }}&sort={{ sort }}&edit=1"
               hx-target="#resources-container"
               hx-swap="innerHTML"
               hx-confirm="確定刪除整個資源「{{ resource.title }}」及其所有項目?">刪除資源</button>
@@ -31,7 +31,7 @@
     </div>
   </header>
   <ul class="items">
-    {% for item in resource.items | sort(attribute='position') %}
+    {% for item in sort_items(resource.items) %}
       {% if filter_item(item) %}
         {% include "partials/item_row.html" %}
       {% endif %}

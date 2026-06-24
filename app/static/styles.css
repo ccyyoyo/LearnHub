@@ -103,16 +103,26 @@ button:disabled { opacity: .6; cursor: progress; }
   padding: 5px 12px; border: 1px solid var(--line); border-radius: 999px; background: #fff;
 }
 .filter.active { background: var(--brand); color: #fff; border-color: var(--brand); }
-
-/* Progress-mode segmented control — visually distinct from the view filters. */
-.progress-toggle { gap: 0; padding: 3px; background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 999px; }
-.progress-toggle .filters-label { color: var(--brand-dark); font-weight: 600; padding: 0 8px 0 6px; }
-.progress-toggle .seg {
-  text-decoration: none; color: var(--brand-dark); font-size: .85rem; font-weight: 600;
-  padding: 5px 14px; border-radius: 999px; background: transparent;
+.sort-form { display: flex; align-items: center; gap: 8px; margin: 4px 0 16px; }
+.sort-form select {
+  padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px;
+  background: #fff; color: var(--ink); font: inherit; font-size: .88rem;
 }
-.progress-toggle .seg:hover { background: #e0e7ff; }
-.progress-toggle .seg.active { background: var(--brand); color: #fff; }
+
+/* Progress-mode toggle button (count ⇄ time). Mode is held client-side. */
+.btn-mode {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: #eef2ff; color: var(--brand-dark); border: 1px solid #c7d2fe;
+  border-radius: 999px; padding: 6px 14px; font-size: .85rem; font-weight: 600;
+}
+.btn-mode:hover { background: #e0e7ff; }
+.btn-mode .mode-ico { font-size: .95rem; line-height: 1; }
+
+/* Count/time label swap, driven by the root mode class. Shared by the toolbar
+   button, the resource progress labels, and the floating widget faces. */
+.lbl-time { display: none; }
+html.mode-time .lbl-count { display: none; }
+html.mode-time .lbl-time { display: inline; }
 
 /* Resource */
 .resource {
@@ -139,7 +149,8 @@ button:disabled { opacity: .6; cursor: progress; }
 /* Progress */
 .progress { display: flex; align-items: center; gap: 8px; min-width: 180px; }
 .progress .bar { flex: 1; height: 8px; background: var(--line); border-radius: 999px; overflow: hidden; }
-.progress .bar span { display: block; height: 100%; background: var(--done); transition: width .25s ease; }
+.progress .bar span { display: block; height: 100%; width: var(--pct-count); background: var(--done); transition: width .25s ease; }
+html.mode-time .progress .bar span { width: var(--pct-time); }
 .progress-label { font-size: .8rem; color: var(--muted); white-space: nowrap; }
 
 /* Items */
@@ -234,6 +245,27 @@ button:disabled { opacity: .6; cursor: progress; }
   z-index: 50;
 }
 .floating-progress.is-empty { display: none; }
+
+/* Clickable card that flips between the count face (front) and time face
+   (back). The flip is driven purely by the root mode class. */
+.fp-card {
+  display: block; width: 100%; margin: 0; padding: 0;
+  background: none; border: none; color: inherit; font: inherit;
+  text-align: left; cursor: pointer;
+}
+.fp-card:hover { background: none; }
+/* Perspective must sit on the rotating element's parent. A button ignores
+   transforms on its *direct* child, so .fp-inner is nested one level deeper. */
+.fp-stage { display: block; perspective: 900px; }
+.fp-inner {
+  position: relative; display: block;
+  transform-style: preserve-3d;
+  transition: transform .5s cubic-bezier(.4, .2, .2, 1);
+}
+html.mode-time .fp-inner { transform: rotateY(180deg); }
+.fp-face { display: block; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.fp-back { position: absolute; inset: 0; transform: rotateY(180deg); }
+
 .fp-head {
   display: flex; align-items: baseline; justify-content: space-between;
   gap: 10px; margin-bottom: 8px;
@@ -245,10 +277,10 @@ button:disabled { opacity: .6; cursor: progress; }
 .fp-count { color: var(--muted); font-size: .82rem; white-space: nowrap; }
 .fp-row { display: flex; align-items: center; gap: 10px; }
 .fp-bar { flex: 1; height: 10px; background: var(--line); border-radius: 999px; overflow: hidden; }
-.fp-bar span { display: block; height: 100%; width: 0; background: var(--brand); transition: width .3s ease; }
+.fp-bar span { display: block; height: 100%; background: var(--brand); transition: width .3s ease; }
 .fp-percent { font-size: .9rem; font-weight: 700; color: var(--brand); white-space: nowrap; }
-.floating-progress.is-complete .fp-bar span { background: var(--done); }
-.floating-progress.is-complete .fp-percent { color: var(--done); }
+.fp-face.is-complete .fp-bar span { background: var(--done); }
+.fp-face.is-complete .fp-percent { color: var(--done); }
 
 /* HTMX indicator */
 .htmx-indicator { opacity: 0; transition: opacity .2s; }

@@ -6,6 +6,16 @@
   <title>LearnHub</title>
   <link rel="stylesheet" href="/static/styles.css">
   <script src="/static/htmx.min.js"></script>
+  <script>
+    // Apply the saved progress mode before first paint (no flash of count mode).
+    (function () {
+      try {
+        if (localStorage.getItem('lh-progress-mode') === 'time') {
+          document.documentElement.classList.add('mode-time');
+        }
+      } catch (e) {}
+    })();
+  </script>
 </head>
 <body>
   <header class="topbar">
@@ -16,5 +26,18 @@
     {% block content %}{% endblock %}
   </main>
   {% include "partials/floating_progress.html" %}
+  <script>
+    // Any [data-progress-toggle] (toolbar button or floating card) flips the
+    // global count/time mode. Delegated so it survives HTMX out-of-band swaps.
+    document.addEventListener('click', function (e) {
+      var toggle = e.target.closest('[data-progress-toggle]');
+      if (!toggle) return;
+      e.preventDefault();
+      var time = document.documentElement.classList.toggle('mode-time');
+      try {
+        localStorage.setItem('lh-progress-mode', time ? 'time' : 'count');
+      } catch (err) {}
+    });
+  </script>
 </body>
 </html>

@@ -26,9 +26,9 @@ class FakeYouTubeClient:
     """Returns canned data so tests don't hit the network/API."""
 
     playlist = [
-        VideoData("vid1", "影片一", "http://thumb/1.jpg", 0, duration_seconds=100),
-        VideoData("vid2", "影片二", "http://thumb/2.jpg", 1, duration_seconds=200),
-        VideoData("vid3", "影片三", "http://thumb/3.jpg", 2, duration_seconds=300),
+        VideoData("vid1", "Charlie", "http://thumb/1.jpg", 0, duration_seconds=100),
+        VideoData("vid2", "Alpha", "http://thumb/2.jpg", 1, duration_seconds=200),
+        VideoData("vid3", "Bravo", "http://thumb/3.jpg", 2, duration_seconds=300),
     ]
 
     async def fetch(self, parsed: ParsedUrl):

@@ -126,15 +126,17 @@ def test_progress_mode_count_vs_time(client):
 def test_progress_toggle_present(client):
     sid = _imported_subject(client)
     page = client.get(f"/subjects/{sid}").text
+    # Single client-side toggle button carrying both mode labels.
+    assert "data-progress-toggle" in page
     assert "依數量" in page
     assert "依時間" in page
-    assert "progress=time" in page
 
 
 def test_refresh_button_present(client):
     sid = _imported_subject(client)
-    page = client.get(f"/subjects/{sid}").text
-    assert "refresh-durations" in page
+    # Refresh-durations lives in edit mode only.
+    assert "refresh-durations" in client.get(f"/subjects/{sid}?edit=1").text
+    assert "refresh-durations" not in client.get(f"/subjects/{sid}").text
 
 
 def test_refresh_durations_updates_items(client):
@@ -186,6 +188,48 @@ def test_filter_incomplete(client):
 
     incomplete = client.get(f"/subjects/{sid}?filter=incomplete").text
     assert incomplete.count('class="item-row') == 0
+
+
+def test_item_sort_duration_and_title(client):
+    sid = _imported_subject(client)
+    original_ids = _item_ids(client, sid)
+    assert len(original_ids) == 3
+
+    duration_desc = client.get(f"/subjects/{sid}?sort=duration_desc").text
+    assert _item_ids_from_html(duration_desc) == list(reversed(original_ids))
+
+    title_asc = client.get(f"/subjects/{sid}?sort=title_asc").text
+    assert _item_ids_from_html(title_asc) == [
+        original_ids[1],  # Alpha
+        original_ids[2],  # Bravo
+        original_ids[0],  # Charlie
+    ]
+
+    title_desc = client.get(f"/subjects/{sid}?sort=title_desc").text
+    assert _item_ids_from_html(title_desc) == [
+        original_ids[0],  # Charlie
+        original_ids[2],  # Bravo
+        original_ids[1],  # Alpha
+    ]
+
+
+def test_item_sort_incomplete_first(client):
+    sid = _imported_subject(client)
+    ids = _item_ids(client, sid)
+    client.post(f"/items/{ids[0]}/cycle")  # -> in_progress
+    client.post(f"/items/{ids[0]}/cycle")  # -> done
+
+    page = client.get(f"/subjects/{sid}?sort=incomplete_first").text
+    assert _item_ids_from_html(page) == [ids[1], ids[2], ids[0]]
+
+
+def test_sort_state_is_preserved_in_controls(client):
+    sid = _imported_subject(client)
+    page = client.get(f"/subjects/{sid}?filter=incomplete&sort=title_desc&edit=1").text
+    assert 'name="sort" value="title_desc"' in page
+    assert 'value="title_desc" selected' in page
+    assert "?filter=all&sort=title_desc&edit=1" in page
+    assert "?filter=incomplete&sort=title_desc" in page
 
 
 # --- Subject rename (inline edit) -------------------------------------------
@@ -242,7 +286,13 @@ def _item_ids(client, sid):
     import re
 
     page = client.get(f"/subjects/{sid}").text
-    return [int(x) for x in re.findall(r'id="item-(\d+)"', page)]
+    return _item_ids_from_html(page)
+
+
+def _item_ids_from_html(html):
+    import re
+
+    return [int(x) for x in re.findall(r'id="item-(\d+)"', html)]
 
 
 def test_edit_mode_renders_controls(client):

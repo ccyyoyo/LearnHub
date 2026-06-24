@@ -8,7 +8,7 @@ from sqlmodel import Session, select
 
 from ..db import get_session
 from ..models import Item, ItemStatus, Resource, Subject, utcnow
-from ..services import normalize_progress_mode, overall_progress, subject_progress
+from ..services import normalize_item_sort, overall_progress, sort_items, subject_progress
 from ..templating import templates
 from ..youtube import YouTubeClient, YouTubeError
 
@@ -46,27 +46,27 @@ def _normalize_filter(filter: str) -> str:
     return filter if filter in {"all", "in_progress", "incomplete"} else "all"
 
 
-def _subject_context(
-    subject: Subject, filter: str, edit: bool, progress: str = "count"
-) -> dict:
+def _subject_context(subject: Subject, filter: str, edit: bool, sort: str) -> dict:
     """Context shared by the subject page and the resources partial."""
+    sort = normalize_item_sort(sort)
     return {
         "subject": subject,
         "resources": sorted(subject.resources, key=lambda r: r.created_at),
         "filter": filter,
         "filter_item": _filter_predicate(filter),
+        "sort": sort,
+        "sort_items": lambda items: sort_items(list(items), sort),
         "edit": edit,
-        "progress_mode": normalize_progress_mode(progress),
         "fp": subject_progress(subject),
         "floating_progress_title": subject.name,
     }
 
 
 def _render_resources(
-    request: Request, subject: Subject, filter: str, edit: bool, progress: str = "count"
+    request: Request, subject: Subject, filter: str, edit: bool, sort: str
 ) -> HTMLResponse:
-    """Re-render the resources list, preserving filter + edit + progress state."""
-    context = _subject_context(subject, filter, edit, progress)
+    """Re-render the resources list, preserving filter + sort + edit state."""
+    context = _subject_context(subject, filter, edit, sort)
     context["emit_oob_floating"] = True  # refresh the floating widget too
     return templates.TemplateResponse(request, "partials/resources.html", context)
 
@@ -181,8 +181,8 @@ def subject_detail(
     subject_id: int,
     request: Request,
     filter: str = "all",
+    sort: str = "original",
     edit: bool = False,
-    progress: str = "count",
     session: Session = Depends(get_session),
 ):
     """Subject detail: resources, completion, status filter, and edit mode (FR-4.2)."""
@@ -192,7 +192,7 @@ def subject_detail(
     return templates.TemplateResponse(
         request,
         "subject.html",
-        _subject_context(subject, _normalize_filter(filter), edit, progress),
+        _subject_context(subject, _normalize_filter(filter), edit, sort),
     )
 
 
@@ -203,8 +203,8 @@ def bulk_status(
     item_ids: list[int] = Form(default=[]),
     status: str = Form(...),
     filter: str = Form("all"),
+    sort: str = Form("original"),
     edit: bool = Form(True),
-    progress: str = Form("count"),
     session: Session = Depends(get_session),
 ):
     """Set the same status on every selected item (edit mode bulk action)."""
@@ -221,7 +221,7 @@ def bulk_status(
         session.add(item)
     session.commit()
     session.refresh(subject)
-    return _render_resources(request, subject, _normalize_filter(filter), edit, progress)
+    return _render_resources(request, subject, _normalize_filter(filter), edit, sort)
 
 
 @router.post("/subjects/{subject_id}/items/bulk-delete", response_class=HTMLResponse)
@@ -230,8 +230,8 @@ def bulk_delete(
     request: Request,
     item_ids: list[int] = Form(default=[]),
     filter: str = Form("all"),
+    sort: str = Form("original"),
     edit: bool = Form(True),
-    progress: str = Form("count"),
     session: Session = Depends(get_session),
 ):
     """Delete every selected item (edit mode bulk action)."""
@@ -242,7 +242,7 @@ def bulk_delete(
         session.delete(item)
     session.commit()
     session.refresh(subject)
-    return _render_resources(request, subject, _normalize_filter(filter), edit, progress)
+    return _render_resources(request, subject, _normalize_filter(filter), edit, sort)
 
 
 @router.delete(
@@ -253,8 +253,8 @@ def delete_resource(
     resource_id: int,
     request: Request,
     filter: str = "all",
+    sort: str = "original",
     edit: bool = True,
-    progress: str = "count",
     session: Session = Depends(get_session),
 ):
     """Delete a whole resource and its items (edit mode)."""
@@ -266,7 +266,7 @@ def delete_resource(
         session.delete(resource)
         session.commit()
         session.refresh(subject)
-    return _render_resources(request, subject, _normalize_filter(filter), edit, progress)
+    return _render_resources(request, subject, _normalize_filter(filter), edit, sort)
 
 
 @router.post(
@@ -278,8 +278,8 @@ async def refresh_durations(
     resource_id: int,
     request: Request,
     filter: str = Form("all"),
+    sort: str = Form("original"),
     edit: bool = Form(False),
-    progress: str = Form("count"),
     session: Session = Depends(get_session),
     client: YouTubeClient = Depends(YouTubeClient),
 ):
@@ -315,6 +315,6 @@ async def refresh_durations(
     session.commit()
     session.refresh(subject)
 
-    context = _subject_context(subject, _normalize_filter(filter), edit, progress)
-    context.update({"resource": resource, "updated": updated})
+    context = _subject_context(subject, _normalize_filter(filter), edit, sort)
+    context.update({"resource": resource, "updated": updated, "emit_oob_floating": True})
     return templates.TemplateResponse(request, "partials/refresh_result.html", context)

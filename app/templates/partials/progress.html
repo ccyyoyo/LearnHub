@@ -1,5 +1,10 @@
-{% set p = resource_progress(resource, progress_mode) %}
-<div class="progress" id="progress-{{ resource.id }}"{% if with_oob_progress %} hx-swap-oob="true"{% endif %}>
-  <div class="bar"><span style="width: {{ p.percent }}%"></span></div>
-  <span class="progress-label">{{ p.label }} · {{ p.percent }}%</span>
+{% set pc = resource_progress(resource, 'count') %}
+{% set pt = resource_progress(resource, 'time') %}
+<div class="progress" id="progress-{{ resource.id }}"{% if with_oob_progress %} hx-swap-oob="true"{% endif %}
+     style="--pct-count: {{ pc.percent }}%; --pct-time: {{ pt.percent }}%">
+  <div class="bar"><span></span></div>
+  <span class="progress-label">
+    <span class="lbl lbl-count">{{ pc.label }} · {{ pc.percent }}%</span>
+    <span class="lbl lbl-time">{{ pt.label }} · {{ pt.percent }}%</span>
+  </span>
 </div>
