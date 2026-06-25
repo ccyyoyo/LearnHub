@@ -48,6 +48,11 @@
     <span class="lbl lbl-count">依數量</span>
     <span class="lbl lbl-time">依時間</span>
   </button>
+  <button type="button" class="btn-export" data-export-titles
+          title="複製目前所有項目的標題到剪貼簿">
+    <span class="export-ico" aria-hidden="true">⎘</span>
+    <span class="export-lbl">輸出</span>
+  </button>
   <a class="btn-toggle active" href="?filter={{ filter }}&sort={{ sort }}">完成編輯</a>
   {% else %}
   <a class="btn-toggle" href="?filter={{ filter }}&sort={{ sort }}&edit=1">編輯</a>
