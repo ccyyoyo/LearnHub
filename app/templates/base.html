@@ -38,6 +38,45 @@
         localStorage.setItem('lh-progress-mode', time ? 'time' : 'count');
       } catch (err) {}
     });
+
+    // 輸出按鈕:把目前顯示的所有項目標題複製到剪貼簿(一行一個,可貼進試算表)。
+    document.addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-export-titles]');
+      if (!btn) return;
+      e.preventDefault();
+      var titles = Array.prototype.map
+        .call(document.querySelectorAll('#resources-container .item-title'),
+              function (el) { return el.textContent.trim(); })
+        .filter(Boolean);
+      var lbl = btn.querySelector('.export-lbl');
+      if (!titles.length) { flashExport(lbl, '沒有項目'); return; }
+      var text = titles.join('\n');
+      function done() { flashExport(lbl, '已複製 ' + titles.length + ' 筆'); }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, function () { fallbackCopy(text, done); });
+      } else {
+        fallbackCopy(text, done);
+      }
+    });
+    function fallbackCopy(text, done) {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); } catch (err) {}
+      document.body.removeChild(ta);
+      done();
+    }
+    function flashExport(lbl, msg) {
+      if (!lbl) return;
+      var prev = lbl.dataset.orig || lbl.textContent;
+      lbl.dataset.orig = prev;
+      lbl.textContent = msg;
+      clearTimeout(lbl._t);
+      lbl._t = setTimeout(function () { lbl.textContent = lbl.dataset.orig; }, 1600);
+    }
   </script>
 </body>
 </html>
