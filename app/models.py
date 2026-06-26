@@ -5,7 +5,7 @@ without a rewrite (G4 / NFR-4): ``Item.note_md`` already exists for Phase 2, and
 nothing here is specific to YouTube beyond ``video_id`` / ``thumbnail_url``.
 """
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from enum import Enum
 from typing import Optional
 
@@ -34,6 +34,20 @@ STATUS_LABELS: dict[ItemStatus, str] = {
     ItemStatus.in_progress: "進行中",
     ItemStatus.done: "已完成",
 }
+
+
+class Goal(SQLModel, table=True):
+    """The learner's headline target, e.g. 「JLPT N4・2026-07-05」.
+
+    Treated as a singleton (at most one row): it anchors the home dashboard
+    banner — the exam countdown, the per-day quota, and the ahead/behind pace.
+    ``created_at`` doubles as the plan's start date for pace calculation.
+    """
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    name: str
+    exam_date: date
+    created_at: datetime = Field(default_factory=utcnow)
 
 
 class Subject(SQLModel, table=True):

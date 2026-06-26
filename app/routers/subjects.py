@@ -2,13 +2,20 @@
 
 from __future__ import annotations
 
+from datetime import date
+
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from sqlmodel import Session, select
 
 from ..db import get_session
-from ..models import Item, ItemStatus, Resource, Subject, utcnow
-from ..services import normalize_progress_mode, overall_progress, subject_progress
+from ..models import Goal, Item, ItemStatus, Resource, Subject, utcnow
+from ..services import (
+    normalize_progress_mode,
+    overall_progress,
+    study_plan,
+    subject_progress,
+)
 from ..templating import templates
 from ..youtube import YouTubeClient, YouTubeError
 
@@ -17,9 +24,12 @@ router = APIRouter()
 
 def _subjects_with_counts(
     session: Session,
-) -> tuple[list[Subject], list[tuple[Subject, int]]]:
+) -> tuple[list[Subject], list[tuple[Subject, int, object]]]:
     subjects = session.exec(select(Subject).order_by(Subject.created_at)).all()
-    rows = [(subject, len(subject.resources)) for subject in subjects]
+    rows = [
+        (subject, len(subject.resources), subject_progress(subject))
+        for subject in subjects
+    ]
     return subjects, rows
 
 
@@ -32,6 +42,20 @@ def _subject_list_context(session: Session) -> dict:
         "floating_progress_title": "總進度",
         "emit_oob_floating": True,
     }
+
+
+def _get_goal(session: Session) -> Goal | None:
+    """The single active goal, if one has been set (newest wins)."""
+    return session.exec(select(Goal).order_by(Goal.id.desc())).first()
+
+
+def _goal_context(session: Session) -> dict:
+    """The home dashboard banner: a study plan when a goal exists, else nothing."""
+    goal = _get_goal(session)
+    if goal is None:
+        return {"plan": None}
+    subjects = session.exec(select(Subject)).all()
+    return {"plan": study_plan(goal, list(subjects), date.today())}
 
 
 def _filter_predicate(filter: str):
@@ -86,10 +110,50 @@ def _subject_items(
 
 @router.get("/", response_class=HTMLResponse)
 def home(request: Request, session: Session = Depends(get_session)):
-    """Landing page: subjects with their resource counts (FR-1.2)."""
+    """Landing page: goal dashboard + subjects with progress (FR-1.2)."""
     context = _subject_list_context(session)
     context["emit_oob_floating"] = False  # full page: base.html renders it inline
+    context.update(_goal_context(session))
     return templates.TemplateResponse(request, "index.html", context)
+
+
+@router.post("/goal", response_class=HTMLResponse)
+def set_goal(
+    request: Request,
+    name: str = Form(...),
+    exam_date: str = Form(...),
+    session: Session = Depends(get_session),
+):
+    """Set (or replace) the exam goal, then return the refreshed banner (HTMX)."""
+    name = name.strip()
+    try:
+        parsed = date.fromisoformat(exam_date.strip())
+    except ValueError:
+        parsed = None
+    if name and parsed:
+        goal = _get_goal(session)
+        if goal is None:
+            goal = Goal(name=name, exam_date=parsed)
+        else:
+            goal.name = name
+            goal.exam_date = parsed
+        session.add(goal)
+        session.commit()
+    return templates.TemplateResponse(
+        request, "partials/goal_banner.html", _goal_context(session)
+    )
+
+
+@router.delete("/goal", response_class=HTMLResponse)
+def clear_goal(request: Request, session: Session = Depends(get_session)):
+    """Remove the exam goal; the banner falls back to the set-goal form."""
+    goal = _get_goal(session)
+    if goal is not None:
+        session.delete(goal)
+        session.commit()
+    return templates.TemplateResponse(
+        request, "partials/goal_banner.html", _goal_context(session)
+    )
 
 
 @router.post("/subjects", response_class=HTMLResponse)
