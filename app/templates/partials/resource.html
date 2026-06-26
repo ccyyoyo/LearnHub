@@ -2,11 +2,15 @@
   <header class="resource-head">
     <div class="resource-meta">
       <span class="badge badge-{{ resource.type.value }}">
-        {{ '播放清單' if resource.type.value == 'playlist' else '單支影片' }}
+        {{ '播放清單' if resource.type.value == 'playlist' else '個別影片' }}
       </span>
+      {% if resource.source_url and resource.source_url.startswith('http') %}
       <a class="resource-title" href="{{ resource.source_url }}" target="_blank" rel="noopener">
         {{ resource.title }}
       </a>
+      {% else %}
+      <span class="resource-title">{{ resource.title }}</span>
+      {% endif %}
       {% set total_secs = resource_total_seconds(resource) %}
       {% if total_secs %}
       <span class="resource-duration" title="總時長">⏱ {{ format_duration(total_secs) }}</span>
