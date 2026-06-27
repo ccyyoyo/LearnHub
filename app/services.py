@@ -6,9 +6,11 @@ data model stays free of redundant counters (PRD §8 note).
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
+from datetime import date
 
-from .models import Item, ItemStatus, Resource, Subject
+from .models import Goal, Item, ItemStatus, Resource, Subject
 
 ITEM_SORTS = {
     "original",
@@ -146,3 +148,108 @@ _NEXT = {
 
 def next_status(current: ItemStatus) -> ItemStatus:
     return _NEXT[current]
+
+
+# --- Goal / study plan (home dashboard banner) ------------------------------
+#
+# Turns "I have an exam on <date>" into today's marching orders: how many videos
+# to finish per day to land on time, and whether the learner is ahead or behind
+# the pace the calendar demands.
+
+# Tolerance (in percentage points) around the expected pace before we call the
+# learner "ahead" or "behind" rather than simply "on track".
+_PACE_BAND = 3
+
+
+@dataclass(frozen=True)
+class StudyPlan:
+    exam_name: str
+    days_left: int  # whole days until the exam; 0 today, negative once past
+    progress: Progress  # overall completion, by video count
+    remaining_items: int  # videos not yet done
+    remaining_seconds: int  # watch-time of the not-done videos
+    daily_items: int  # videos/day needed to finish on time
+    daily_minutes: int  # watch-minutes/day needed to finish on time
+    expected_percent: int  # where the calendar says you "should" be by now
+
+    @property
+    def is_complete(self) -> bool:
+        return self.progress.total > 0 and self.remaining_items == 0
+
+    @property
+    def is_overdue(self) -> bool:
+        return self.days_left < 0 and not self.is_complete
+
+    @property
+    def countdown_label(self) -> str:
+        if self.days_left > 1:
+            return f"倒數 {self.days_left} 天"
+        if self.days_left == 1:
+            return "剩最後 1 天"
+        if self.days_left == 0:
+            return "就是今天!"
+        return f"已過考試日 {abs(self.days_left)} 天"
+
+    @property
+    def pace(self) -> str:
+        """One of: ``done`` / ``overdue`` / ``ahead`` / ``behind`` / ``on_track``."""
+        if self.is_complete:
+            return "done"
+        if self.is_overdue:
+            return "overdue"
+        delta = self.progress.percent - self.expected_percent
+        if delta >= _PACE_BAND:
+            return "ahead"
+        if delta <= -_PACE_BAND:
+            return "behind"
+        return "on_track"
+
+    @property
+    def pace_label(self) -> str:
+        return {
+            "done": "全部完成 🎉",
+            "overdue": "已過期 ⏰",
+            "ahead": "超前進度 🚀",
+            "behind": "落後了 ⚠️",
+            "on_track": "跟上進度 ✅",
+        }[self.pace]
+
+
+def _remaining_seconds(items: list[Item]) -> int:
+    return sum(_seconds(it) for it in items if it.status is not ItemStatus.done)
+
+
+def study_plan(goal: Goal, subjects: list[Subject], today: date) -> StudyPlan:
+    """Compute the dashboard plan for ``goal`` against everything the learner has.
+
+    The daily quota spreads the *remaining* work evenly over the days left; the
+    expected percent spreads it over the *whole* run (goal-set date → exam) so
+    we can say whether the learner is ahead of or behind schedule.
+    """
+    items = [it for sub in subjects for res in sub.resources for it in res.items]
+    progress = count_progress(items)
+    remaining_items = progress.total - progress.done
+    remaining_seconds = _remaining_seconds(items)
+
+    days_left = (goal.exam_date - today).days
+    # Once the exam is here (or past) there's no "spread over N days" left, so
+    # the day's quota is simply everything that remains.
+    spread_days = max(days_left, 1)
+    daily_items = math.ceil(remaining_items / spread_days) if remaining_items else 0
+    daily_minutes = math.ceil(remaining_seconds / 60 / spread_days)
+
+    start = goal.created_at.date()
+    total_days = max((goal.exam_date - start).days, 1)
+    elapsed = min(max((today - start).days, 0), total_days)
+    expected_percent = round(elapsed / total_days * 100)
+
+    return StudyPlan(
+        exam_name=goal.name,
+        days_left=days_left,
+        progress=progress,
+        remaining_items=remaining_items,
+        remaining_seconds=remaining_seconds,
+        daily_items=daily_items,
+        daily_minutes=daily_minutes,
+        expected_percent=expected_percent,
+    )

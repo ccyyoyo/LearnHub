@@ -411,3 +411,74 @@ def test_floating_hidden_when_no_items(client):
     # Element still present (so OOB swaps have a target) but visually hidden.
     assert 'id="floating-progress"' in page
     assert "is-empty" in page
+
+
+# --- Home: per-subject progress bars (feature ①) ----------------------------
+
+
+def test_home_subject_card_shows_progress(client):
+    sid = _imported_subject(client)  # 3 items, none done
+    home = client.get("/").text
+    assert "0 個資源" not in home  # the card now shows real progress, not just count
+    assert 'class="subject-info"' in home
+    assert "0%" in home  # nothing done yet
+
+    # Finish one of three → card reflects 33%.
+    iid = _item_ids(client, sid)[0]
+    client.post(f"/items/{iid}/cycle")  # -> in_progress
+    client.post(f"/items/{iid}/cycle")  # -> done
+    assert "33%" in client.get("/").text
+
+
+# --- Home: goal dashboard banner (feature ②) --------------------------------
+
+
+def _future_date(days=40):
+    from datetime import date, timedelta
+
+    return (date.today() + timedelta(days=days)).isoformat()
+
+
+def test_home_prompts_to_set_goal_when_none(client):
+    home = client.get("/").text
+    assert 'id="goal-banner"' in home
+    assert "設定考試目標" in home  # the set-goal call to action
+    assert 'hx-post="/goal"' in home
+
+
+def test_set_goal_renders_countdown_and_quota(client):
+    _imported_subject(client)  # 3 unwatched videos to spread over the runway
+    r = client.post("/goal", data={"name": "JLPT N4", "exam_date": _future_date(40)})
+    assert r.status_code == 200
+    assert "JLPT N4" in r.text
+    assert "倒數 40 天" in r.text
+    assert "今天" in r.text and "支" in r.text  # daily quota
+    assert "還沒看" in r.text
+
+    # Banner now persists on the home page.
+    home = client.get("/").text
+    assert "JLPT N4" in home
+    assert "倒數 40 天" in home
+
+
+def test_goal_quota_counts_only_unwatched(client):
+    sid = _imported_subject(client)
+    for iid in _item_ids(client, sid):  # finish everything
+        client.post(f"/items/{iid}/cycle")
+        client.post(f"/items/{iid}/cycle")
+    r = client.post("/goal", data={"name": "N4", "exam_date": _future_date(30)})
+    assert "全部完成" in r.text  # 0 remaining → done pace, quota hidden
+
+
+def test_clear_goal_returns_setup_form(client):
+    client.post("/goal", data={"name": "N4", "exam_date": _future_date(20)})
+    r = client.delete("/goal")
+    assert r.status_code == 200
+    assert "設定考試目標" in r.text
+    assert "倒數" not in r.text
+
+
+def test_set_goal_bad_date_is_ignored(client):
+    r = client.post("/goal", data={"name": "N4", "exam_date": "not-a-date"})
+    assert r.status_code == 200
+    assert "設定考試目標" in r.text  # stayed on the setup form, no crash

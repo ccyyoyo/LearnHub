@@ -75,19 +75,50 @@ button:disabled { opacity: .6; cursor: progress; }
 .crumb { margin-bottom: 8px; }
 .crumb a { color: var(--brand); text-decoration: none; }
 
+/* Goal dashboard banner (home) */
+.goal-banner { border-color: #c7d2fe; background: linear-gradient(180deg, #eef2ff 0%, #fff 60%); }
+.goal-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.goal-title { font-weight: 700; font-size: 1.1rem; }
+.goal-countdown {
+  font-weight: 700; font-size: .95rem; padding: 3px 12px; border-radius: 999px;
+  background: #fff; border: 1px solid var(--line);
+}
+.goal-head .goal-pace { font-size: .85rem; font-weight: 600; }
+.goal-head form { margin-left: auto; }
+.goal-stats { display: flex; gap: 14px; flex-wrap: wrap; margin: 14px 0; }
+.goal-stat {
+  flex: 1 1 160px; display: flex; flex-direction: column; gap: 2px;
+  padding: 10px 14px; background: #fff; border: 1px solid var(--line); border-radius: 10px;
+}
+.goal-stat b { font-size: 1.15rem; }
+.goal-stat small { color: var(--muted); font-size: .8rem; }
+.goal-progress { margin-top: 4px; }
+.goal-cta { margin: 0 0 10px; font-weight: 600; }
+.goal-setup .inline-form input[type=date] { flex: 0 0 auto; padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px; font-size: .95rem; }
+
+/* Pace colour coding, shared by countdown chip / pace label / percent */
+.pace-ahead, .pace-done { color: var(--done); }
+.pace-on_track { color: var(--brand); }
+.pace-behind, .pace-overdue { color: var(--warn); }
+.goal-countdown.pace-behind, .goal-countdown.pace-overdue { background: #fef2f2; border-color: #fecaca; }
+.goal-countdown.pace-ahead, .goal-countdown.pace-done { background: #f0fdf4; border-color: #bbf7d0; }
+
 /* Subjects */
 .subject-list { list-style: none; padding: 0; margin: 16px 0 0; display: grid; gap: 10px; }
 .subject-card {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
   padding: 14px 16px;
   border: 1px solid var(--line);
   border-radius: 10px;
 }
-.subject-name { font-weight: 600; text-decoration: none; color: var(--ink); flex: 1; }
+.subject-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.subject-name { font-weight: 600; text-decoration: none; color: var(--ink); }
 .subject-name:hover { color: var(--brand); }
 .count { color: var(--muted); font-size: .85rem; }
+.subject-card .progress { flex: 0 0 auto; width: 150px; min-width: 0; }
+.subject-card .progress.is-complete .bar span { background: var(--done); }
 .link-danger {
   background: none; color: var(--warn); padding: 4px 8px; font-weight: 500; font-size: .85rem;
 }

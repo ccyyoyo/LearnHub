@@ -1,9 +1,16 @@
 {% if subject_rows %}
 <ul class="subject-list">
-  {% for subject, count in subject_rows %}
+  {% for subject, count, progress in subject_rows %}
   <li class="subject-card">
-    <a class="subject-name" href="/subjects/{{ subject.id }}">{{ subject.name }}</a>
-    <span class="count">{{ count }} 個資源</span>
+    <div class="subject-info">
+      <a class="subject-name" href="/subjects/{{ subject.id }}">{{ subject.name }}</a>
+      <span class="count">{{ count }} 個資源</span>
+    </div>
+    <div class="progress{% if progress.total and progress.percent == 100 %} is-complete{% endif %}"
+         title="{{ progress.done }}/{{ progress.total }} 部影片完成">
+      <div class="bar"><span style="width: {{ progress.percent }}%"></span></div>
+      <span class="progress-label">{{ progress.percent }}%</span>
+    </div>
     <button class="link-danger"
             hx-delete="/subjects/{{ subject.id }}"
             hx-target="#subject-list"

@@ -1,0 +1,47 @@
+{# Home dashboard banner: exam countdown + per-day quota + ahead/behind pace.
+   Replaces itself (outerHTML) on set/clear so the #goal-banner id is stable. #}
+<section class="panel goal-banner" id="goal-banner">
+{% if plan %}
+  <div class="goal-head">
+    <span class="goal-title">🎯 {{ plan.exam_name }}</span>
+    <span class="goal-countdown pace-{{ plan.pace }}">{{ plan.countdown_label }}</span>
+    <span class="goal-pace pace-{{ plan.pace }}">{{ plan.pace_label }}</span>
+    <form hx-delete="/goal" hx-target="#goal-banner" hx-swap="outerHTML"
+          hx-confirm="清除考試目標?">
+      <button class="link-danger" type="submit">清除</button>
+    </form>
+  </div>
+
+  {% if not plan.is_complete and not plan.is_overdue %}
+  <div class="goal-stats">
+    <div class="goal-stat">
+      <b>今天 {{ plan.daily_items }} 支</b>
+      <small>約 {{ plan.daily_minutes }} 分鐘 / 天就能準時看完</small>
+    </div>
+    <div class="goal-stat">
+      <b>{{ plan.remaining_items }} 支</b>
+      <small>還沒看</small>
+    </div>
+    <div class="goal-stat">
+      <b class="pace-{{ plan.pace }}">{{ plan.progress.percent }}%</b>
+      <small>目前進度(預計應達 {{ plan.expected_percent }}%)</small>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="progress goal-progress{% if plan.progress.percent == 100 %} is-complete{% endif %}">
+    <div class="bar"><span style="width: {{ plan.progress.percent }}%"></span></div>
+    <span class="progress-label">{{ plan.progress.done }}/{{ plan.progress.total }} · {{ plan.progress.percent }}%</span>
+  </div>
+{% else %}
+  <form class="goal-setup" hx-post="/goal" hx-target="#goal-banner" hx-swap="outerHTML">
+    <p class="goal-cta">🎯 設定考試目標,把進度換算成「今天該看幾支」</p>
+    <div class="inline-form">
+      <input name="name" placeholder="考試名稱(例:JLPT N4)" value="JLPT N4"
+             autocomplete="off" required>
+      <input type="date" name="exam_date" required aria-label="考試日期">
+      <button type="submit">設定</button>
+    </div>
+  </form>
+{% endif %}
+</section>
