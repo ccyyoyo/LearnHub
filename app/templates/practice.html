@@ -3,13 +3,57 @@
 <nav class="crumb"><a href="/subjects/{{ subject.id }}">← {{ subject.name }}</a></nav>
 <section class="panel">
   <h2>練習推薦:{{ subject.name }}</h2>
-  {% if item %}
-  <p class="hint">系統挑了這個主題裡最該練的影片(沒練過優先,再來是錯誤率高的)。</p>
-  <p>推薦練習:<strong>{{ item.title }}</strong></p>
-  {% with quiz_target = "#practice-quiz" %}
-    {% include "partials/quiz_launcher.html" %}
-  {% endwith %}
+  {% if units %}
+  <p class="hint">勾選想練的單元(沒練過或錯誤率高的排在前面),選好總題數,AI 會依弱項分配題目。</p>
+  <form class="practice-pick"
+        hx-post="/practice/{{ subject.id }}/quiz"
+        hx-target="#practice-quiz"
+        hx-swap="innerHTML"
+        hx-indicator="#practice-spin"
+        hx-disabled-elt="find button[type=submit]">
+    <div class="pick-toolbar">
+      <label><input type="checkbox" id="pick-all" checked> 全選</label>
+      <label class="quiz-n">總題數
+        <select name="n">
+          {% for i in range(1, 11) %}
+          <option value="{{ i }}" {{ 'selected' if i == 5 }}>{{ i }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <button type="submit">開始出題</button>
+      <span id="practice-spin" class="htmx-indicator spinner">出題中…</span>
+    </div>
+    <ul class="pick-list">
+      {% for u in units %}
+      <li class="pick-row">
+        <label>
+          <input type="checkbox" name="item_ids" value="{{ u.item.id }}" checked>
+          <span class="pick-title">{{ u.item.title }}</span>
+        </label>
+        <span class="pick-stats">
+          {% if u.practiced %}
+          練習 {{ u.attempts }} 次 · 錯誤率 {{ u.error_rate }}%
+          {% else %}
+          未練習
+          {% endif %}
+        </span>
+      </li>
+      {% endfor %}
+    </ul>
+  </form>
   <div id="practice-quiz" class="quiz-panel-box"></div>
+  <script>
+    (function () {
+      var all = document.getElementById('pick-all');
+      if (!all) return;
+      var boxes = function () {
+        return document.querySelectorAll('.pick-list input[name="item_ids"]');
+      };
+      all.addEventListener('change', function () {
+        boxes().forEach(function (b) { b.checked = all.checked; });
+      });
+    })();
+  </script>
   {% else %}
   <p class="empty">這個主題還沒有可練習的影片,先去匯入一些吧!</p>
   {% endif %}

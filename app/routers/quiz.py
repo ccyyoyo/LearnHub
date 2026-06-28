@@ -24,7 +24,6 @@ from ..services import (
     practice_units,
     practice_weight,
     resolve_source_text,
-    select_practice_item,
 )
 from ..templating import templates
 from ..transcripts import TranscriptFetcher
@@ -195,11 +194,11 @@ def practice(
     request: Request,
     session: Session = Depends(get_session),
 ):
-    """Entry B: auto-pick the subject's most-needed item, then offer 出題."""
+    """Entry B: list every unit with stats so the learner picks what to drill."""
     subject = session.get(Subject, subject_id)
     if not subject:
         raise HTTPException(404, "Subject not found")
-    item = select_practice_item(subject)
+    units = practice_units(subject)
     return templates.TemplateResponse(
-        request, "practice.html", {"subject": subject, "item": item}
+        request, "practice.html", {"subject": subject, "units": units}
     )

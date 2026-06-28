@@ -216,12 +216,15 @@ def test_home_quiz_stats_and_recommendation(client, provider, fetcher):
     assert "錯誤率 50%" in home  # subject now practiced, shown with rate
 
 
-def test_practice_route_picks_item_and_offers_quiz(client):
+def test_practice_route_lists_selectable_units(client):
     sid = _imported_subject(client)
     resp = client.get(f"/practice/{sid}")
     assert resp.status_code == 200
-    assert "推薦練習" in resp.text
-    assert "/quiz" in resp.text  # launcher wired to generate
+    # 勾選清單:3 支影片各一個 checkbox,送到新端點。
+    assert resp.text.count('<input type="checkbox" name="item_ids"') == 3
+    assert f"/practice/{sid}/quiz" in resp.text
+    assert "Charlie" in resp.text  # 影片標題列出
+    assert "開始出題" in resp.text
 
 
 def test_prompt_targets_language_not_plot_recall():
