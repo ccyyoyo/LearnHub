@@ -1,6 +1,12 @@
 {% if not questions %}
 <p class="empty">這支影片暫時無法出題,請稍後再試或先補上筆記。</p>
 {% else %}
+<div class="quiz-head">
+  <span class="quiz-count">題目({{ questions|length }})</span>
+  <button type="button" class="quiz-close"
+          title="清除題目"
+          onclick="this.closest('.quiz-panel-box').innerHTML=''">✕ 收起</button>
+</div>
 <ol class="quiz-list">
   {% for q in questions %}
   <li class="quiz-q" id="quiz-q-{{ q.id }}">

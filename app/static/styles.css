@@ -343,6 +343,15 @@ html.mode-time .fp-inner { transform: rotateY(180deg); }
 .quiz-launch .quiz-n { font-size: .85rem; color: var(--muted); }
 .quiz-launch select { padding: .2rem .4rem; }
 
+.quiz-head { display: flex; align-items: center; justify-content: space-between; margin: .4rem 0 0; }
+.quiz-count { font-size: .85rem; font-weight: 600; color: var(--muted); }
+.quiz-close {
+  font-size: .8rem; padding: .2rem .6rem; cursor: pointer;
+  color: var(--muted); background: transparent;
+  border: 1px solid var(--line); border-radius: 999px;
+}
+.quiz-close:hover { color: var(--warn); border-color: #fecaca; background: #fef2f2; }
+
 .quiz-list { list-style: none; padding: 0; margin: .4rem 0 0; display: grid; gap: .8rem; }
 .quiz-q {
   border: 1px solid var(--line); border-radius: var(--radius);
