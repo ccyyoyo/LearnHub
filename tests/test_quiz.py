@@ -356,3 +356,36 @@ def test_practice_units_sorts_never_practiced_first_then_error(engine):
         assert units[0].practiced is False
         assert units[1].error_rate == 100
         assert units[0].attempts == 0
+
+
+# --- multi-unit practice quiz endpoint --------------------------------------
+
+
+def test_practice_quiz_generates_for_selected_units(client, provider, fetcher):
+    sid = _imported_subject(client)
+    iids = _item_ids(client, sid)
+    r = client.post(
+        f"/practice/{sid}/quiz",
+        data={"item_ids": iids[:2], "n": 6},
+    )
+    assert r.status_code == 200
+    assert len(_quiz_question_ids(r.text)) == 6  # total split across 2 units
+
+
+def test_practice_quiz_requires_a_selection(client, provider, fetcher):
+    sid = _imported_subject(client)
+    r = client.post(f"/practice/{sid}/quiz", data={"item_ids": [], "n": 5})
+    assert r.status_code == 200
+    assert "請至少勾選一個單元" in r.text
+
+
+def test_practice_quiz_ignores_foreign_item_ids(client, provider, fetcher):
+    sid = _imported_subject(client)
+    iids = _item_ids(client, sid)
+    # 999999 不屬於該 subject → 被忽略,只就合法單元出題。
+    r = client.post(
+        f"/practice/{sid}/quiz",
+        data={"item_ids": [iids[0], 999999], "n": 4},
+    )
+    assert r.status_code == 200
+    assert len(_quiz_question_ids(r.text)) == 4
