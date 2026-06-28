@@ -279,3 +279,80 @@ def test_allocate_single_unit_gets_all():
 def test_allocate_all_zero_weight_falls_back_to_even():
     plan = allocate_questions([(1, 0.0), (2, 0.0)], 4)
     assert plan == {1: 2, 2: 2}
+
+
+# --- practice_units / practice_weight ---------------------------------------
+
+from app.models import Item, Question as QModel, Resource, Subject
+from app.services import practice_units, practice_weight
+
+
+def _make_subject_with_items(session):
+    sub = Subject(name="日語 N5")
+    session.add(sub)
+    session.commit()
+    session.refresh(sub)
+    res = Resource(subject_id=sub.id, type="playlist", source_url="u", title="t")
+    session.add(res)
+    session.commit()
+    session.refresh(res)
+    items = []
+    for pos in range(3):
+        it = Item(resource_id=res.id, video_id=f"v{pos}", title=f"T{pos}", position=pos)
+        session.add(it)
+        items.append(it)
+    session.commit()
+    for it in items:
+        session.refresh(it)
+    return sub, items
+
+
+def _answer(session, item, *, correct: bool):
+    q = QModel(
+        item_id=item.id,
+        stem="?",
+        options_json='["a","b","c","d"]',
+        answer_index=0,
+        explanation="e",
+    )
+    session.add(q)
+    session.commit()
+    session.refresh(q)
+    session.add(
+        Attempt(question_id=q.id, chosen_index=0 if correct else 1, is_correct=correct)
+    )
+    session.commit()
+
+
+def test_practice_weight_never_practiced_is_max(engine):
+    with Session(engine) as s:
+        _, items = _make_subject_with_items(s)
+        assert practice_weight(items[0]) == 1.0  # no attempts → top priority
+
+
+def test_practice_weight_practiced_uses_error_rate(engine):
+    with Session(engine) as s:
+        _, items = _make_subject_with_items(s)
+        _answer(s, items[0], correct=False)  # 1 wrong of 1 → rate 1.0
+        s.refresh(items[0])
+        assert practice_weight(items[0]) == 1.0
+        _answer(s, items[0], correct=True)  # now 1 wrong of 2 → 0.5
+        s.refresh(items[0])
+        assert practice_weight(items[0]) == 0.5
+
+
+def test_practice_units_sorts_never_practiced_first_then_error(engine):
+    with Session(engine) as s:
+        sub, items = _make_subject_with_items(s)
+        _answer(s, items[0], correct=True)  # practiced, 0% error
+        _answer(s, items[1], correct=False)  # practiced, 100% error
+        # items[2] never practiced
+        s.refresh(sub)
+        units = practice_units(sub)
+        ids = [u.item.id for u in units]
+        assert ids[0] == items[2].id  # never-practiced first
+        assert ids[1] == items[1].id  # then highest error
+        assert ids[2] == items[0].id
+        assert units[0].practiced is False
+        assert units[1].error_rate == 100
+        assert units[0].attempts == 0

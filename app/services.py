@@ -453,3 +453,42 @@ def allocate_questions(weights: list[tuple[int, float]], n: int) -> dict[int, in
     apportion_weights = raw if sum(raw) > 0 else [1.0] * units
     extra = _largest_remainder(apportion_weights, remainder)
     return {weights[i][0]: 1 + extra[i] for i in range(units)}
+
+
+def practice_weight(item: Item) -> float:
+    """Need score for question allocation: never-practiced ranks highest (1.0),
+    otherwise the item's error rate (0..1)."""
+    if item_attempt_count(item) == 0:
+        return 1.0
+    return item_error_rate(item)
+
+
+@dataclass(frozen=True)
+class PracticeUnit:
+    """One selectable row on the practice page (a single video + its stats)."""
+
+    item: Item
+    attempts: int
+    error_rate: int  # %, 0 when never practiced
+    practiced: bool
+
+
+def practice_units(subject: Subject) -> list[PracticeUnit]:
+    """Every video under a subject as selectable rows, ordered by need.
+
+    Never-practiced first (coverage), then highest error rate — same ranking as
+    ``select_practice_item`` / ``practice_recommendations``.
+    """
+    rows: list[PracticeUnit] = []
+    for item in _subject_items(subject):
+        attempts = item_attempt_count(item)
+        rows.append(
+            PracticeUnit(
+                item=item,
+                attempts=attempts,
+                error_rate=round(item_error_rate(item) * 100),
+                practiced=attempts > 0,
+            )
+        )
+    rows.sort(key=lambda r: (r.practiced, -r.error_rate))
+    return rows
