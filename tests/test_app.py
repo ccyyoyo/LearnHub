@@ -190,6 +190,35 @@ def test_filter_incomplete(client):
     assert incomplete.count('class="item-row') == 0
 
 
+def test_import_respects_active_filter(client):
+    # Importing while the 未完成 (incomplete) filter is active must return a
+    # resources fragment honoring that filter — not silently fall back to "all"
+    # while the toolbar tag stays on 未完成.
+    _create_subject(client)
+    sid = _subject_id(client)
+    url = "https://www.youtube.com/playlist?list=PLtest"
+    client.post("/import", data={"subject_id": sid, "url": url})
+
+    import re
+
+    page = client.get(f"/subjects/{sid}").text
+    item_ids = [int(x) for x in re.findall(r'id="item-(\d+)"', page)]
+    # Mark the first item done so it should be hidden under "incomplete".
+    client.post(f"/items/{item_ids[0]}/cycle")  # -> in_progress
+    client.post(f"/items/{item_ids[0]}/cycle")  # -> done
+
+    # Re-import with the incomplete filter active (as the form now sends it).
+    r = client.post(
+        "/import",
+        data={"subject_id": sid, "url": url, "filter": "incomplete"},
+    )
+    assert r.status_code == 200
+    # The done item must not appear in the re-rendered resources fragment.
+    assert f'id="item-{item_ids[0]}"' not in r.text
+    # The two not-yet-done items remain.
+    assert r.text.count('class="item-row') == 2
+
+
 def test_item_sort_duration_and_title(client):
     sid = _imported_subject(client)
     original_ids = _item_ids(client, sid)

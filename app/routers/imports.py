@@ -15,6 +15,7 @@ from ..models import SINGLES_SOURCE, Item, Resource, Subject
 from ..services import normalize_item_sort, sort_items, subject_progress
 from ..templating import templates
 from ..youtube import YouTubeClient, YouTubeError, parse_youtube_url
+from .subjects import _filter_predicate, _normalize_filter
 
 router = APIRouter()
 
@@ -25,6 +26,7 @@ async def import_resource(
     subject_id: int = Form(...),
     url: str = Form(...),
     sort: str = Form("original"),
+    filter: str = Form("all"),
     session: Session = Depends(get_session),
     client: YouTubeClient = Depends(YouTubeClient),
 ):
@@ -103,6 +105,7 @@ async def import_resource(
     session.refresh(resource)
     session.refresh(subject)
     sort = normalize_item_sort(sort)
+    filter = _normalize_filter(filter)
 
     return templates.TemplateResponse(
         request,
@@ -113,8 +116,8 @@ async def import_resource(
             "added": added,
             "total": len(videos),
             "resources": sorted(subject.resources, key=lambda r: r.created_at),
-            "filter_item": lambda it: True,
-            "filter": "all",
+            "filter_item": _filter_predicate(filter),
+            "filter": filter,
             "sort": sort,
             "sort_items": lambda items: sort_items(list(items), sort),
             "edit": False,

@@ -15,6 +15,7 @@
         hx-on::after-request="if(event.detail.successful){this.querySelector('input[name=url]').value=''}">
     <input type="hidden" name="subject_id" value="{{ subject.id }}">
     <input type="hidden" name="sort" value="{{ sort }}">
+    <input type="hidden" name="filter" value="{{ filter }}">
     <input name="url" placeholder="https://www.youtube.com/playlist?list=…" autocomplete="off" required>
     <button type="submit">匯入</button>
     <span id="import-spinner" class="htmx-indicator spinner">匯入中…</span>
