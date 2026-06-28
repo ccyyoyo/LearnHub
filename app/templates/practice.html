@@ -52,6 +52,13 @@
       all.addEventListener('change', function () {
         boxes().forEach(function (b) { b.checked = all.checked; });
       });
+      // Reverse-sync: reflect individual changes back onto the master box.
+      document.querySelector('.pick-list').addEventListener('change', function () {
+        var list = boxes();
+        var checked = [].filter.call(list, function (b) { return b.checked; }).length;
+        all.checked = checked === list.length;
+        all.indeterminate = checked > 0 && checked < list.length;
+      });
     })();
   </script>
   {% else %}

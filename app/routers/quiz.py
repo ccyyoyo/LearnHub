@@ -183,8 +183,10 @@ def practice_quiz(
         for q in new_questions:
             session.refresh(q)
 
+    # quiz.html renders a flat ``questions`` list; no single ``item`` applies
+    # when questions span several units.
     return templates.TemplateResponse(
-        request, "partials/quiz.html", {"item": subject, "questions": questions}
+        request, "partials/quiz.html", {"questions": questions}
     )
 
 

@@ -392,3 +392,18 @@ def test_practice_quiz_ignores_foreign_item_ids(client, provider, fetcher):
     )
     assert r.status_code == 200
     assert len(_quiz_question_ids(r.text)) == 4
+
+
+def test_practice_quiz_reuses_wrong_questions_per_unit(client, provider, fetcher):
+    sid = _imported_subject(client)
+    iids = _item_ids(client, sid)
+    # 先就單一單元出 2 題並全答錯 → 進入該單元的複習池。
+    r1 = client.post(f"/items/{iids[0]}/quiz", data={"n": 2})
+    for qid in _quiz_question_ids(r1.text):
+        client.post(f"/questions/{qid}/answer", data={"chosen_index": 1})
+    provider.calls.clear()
+
+    # 只勾該單元、要 3 題 → 2 題重用 + 只生成 1 題。
+    r2 = client.post(f"/practice/{sid}/quiz", data={"item_ids": [iids[0]], "n": 3})
+    assert len(_quiz_question_ids(r2.text)) == 3
+    assert provider.calls[-1][1] == 1  # only one new question generated
