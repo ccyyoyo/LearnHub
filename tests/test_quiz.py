@@ -239,3 +239,43 @@ def test_practice_empty_subject(client):
     sid = int(re.findall(r"/subjects/(\d+)", client.get("/").text)[-1])
     page = client.get(f"/practice/{sid}").text
     assert "還沒有可練習的影片" in page
+
+
+# --- allocate_questions -----------------------------------------------------
+
+from app.services import allocate_questions
+
+
+def test_allocate_even_when_weights_equal():
+    # 3 單元權重相同 → 6 題平均每單元 2 題。
+    plan = allocate_questions([(1, 1.0), (2, 1.0), (3, 1.0)], 6)
+    assert plan == {1: 2, 2: 2, 3: 2}
+
+
+def test_allocate_weights_toward_high_error():
+    # 高錯誤率單元拿較多題;保底每單元 1 題;總和守恆。
+    plan = allocate_questions([(1, 0.8), (2, 0.2)], 10)
+    assert sum(plan.values()) == 10
+    assert plan[1] > plan[2]
+    assert plan[2] >= 1
+
+
+def test_allocate_min_one_each_when_n_equals_units():
+    plan = allocate_questions([(1, 0.9), (2, 0.0), (3, 0.5)], 3)
+    assert plan == {1: 1, 2: 1, 3: 1}
+
+
+def test_allocate_fewer_questions_than_units_picks_top_weighted():
+    # n < 單元數 → 無法每個都給;權重最高的 n 個各 1 題,其餘 0。
+    plan = allocate_questions([(1, 0.1), (2, 0.9), (3, 0.5), (4, 0.0)], 2)
+    assert sum(plan.values()) == 2
+    assert plan == {2: 1, 3: 1, 1: 0, 4: 0}
+
+
+def test_allocate_single_unit_gets_all():
+    assert allocate_questions([(7, 0.0)], 5) == {7: 5}
+
+
+def test_allocate_all_zero_weight_falls_back_to_even():
+    plan = allocate_questions([(1, 0.0), (2, 0.0)], 4)
+    assert plan == {1: 2, 2: 2}

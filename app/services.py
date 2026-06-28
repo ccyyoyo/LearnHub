@@ -402,3 +402,54 @@ def practice_recommendations(subjects: list[Subject]) -> list[SubjectPractice]:
         rows.append(SubjectPractice(subject, practiced=True, error_rate=rate))
     rows.sort(key=lambda r: (r.practiced, -r.error_rate))
     return rows
+
+
+def _largest_remainder(weights: list[float], total: int) -> list[int]:
+    """Apportion ``total`` whole units across ``weights`` (Hamilton method).
+
+    Floor each ideal share, then hand out the leftover units to the largest
+    fractional remainders. Ties broken by list order (earlier wins).
+    """
+    weight_sum = sum(weights)
+    if total <= 0 or weight_sum <= 0:
+        return [0] * len(weights)
+    ideals = [total * w / weight_sum for w in weights]
+    floors = [int(x) for x in ideals]
+    leftover = total - sum(floors)
+    # Indices ranked by fractional remainder desc, then original order.
+    order = sorted(
+        range(len(weights)),
+        key=lambda i: (ideals[i] - floors[i]),
+        reverse=True,
+    )
+    for i in order[:leftover]:
+        floors[i] += 1
+    return floors
+
+
+def allocate_questions(weights: list[tuple[int, float]], n: int) -> dict[int, int]:
+    """Split ``n`` questions across units, weighted toward weaker units.
+
+    ``weights`` is ``(item_id, weight)`` in display/need order; higher weight =
+    more questions. Guarantees every unit at least 1 question when ``n`` allows;
+    when ``n`` < number of units, only the top-``n`` weighted units get a
+    question (one each), the rest get 0. Returns ``{item_id: count}`` summing to
+    ``n``.
+    """
+    if not weights or n <= 0:
+        return {item_id: 0 for item_id, _ in weights}
+
+    units = len(weights)
+    if n < units:
+        # Can't give everyone one — rank by weight (then order) and pick top n.
+        ranked = sorted(range(units), key=lambda i: (-weights[i][1], i))
+        chosen = set(ranked[:n])
+        return {weights[i][0]: (1 if i in chosen else 0) for i in range(units)}
+
+    # Everyone gets a guaranteed 1; apportion the rest by weight (even split
+    # when all weights are zero).
+    remainder = n - units
+    raw = [w for _, w in weights]
+    apportion_weights = raw if sum(raw) > 0 else [1.0] * units
+    extra = _largest_remainder(apportion_weights, remainder)
+    return {weights[i][0]: 1 + extra[i] for i in range(units)}
