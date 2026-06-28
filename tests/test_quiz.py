@@ -224,6 +224,16 @@ def test_practice_route_picks_item_and_offers_quiz(client):
     assert "/quiz" in resp.text  # launcher wired to generate
 
 
+def test_prompt_targets_language_not_plot_recall():
+    from app.ai.prompts import build_prompt
+
+    prompt = build_prompt("これは会社へ行く話です。", 3)
+    assert "3" in prompt
+    assert "語彙" in prompt and "文法" in prompt  # tests language ability
+    assert "劇情" in prompt  # explicitly forbids plot/content recall
+    assert "これは会社へ行く話です。" in prompt  # source embedded
+
+
 def test_practice_empty_subject(client):
     client.post("/subjects", data={"name": "空主題"})
     sid = int(re.findall(r"/subjects/(\d+)", client.get("/").text)[-1])
