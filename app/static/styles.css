@@ -375,3 +375,36 @@ html.mode-time .fp-inner { transform: rotateY(180deg); }
 .practice-name { font-weight: 600; }
 .tag { font-size: .78rem; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: .1rem .55rem; }
 .tag.warn { color: var(--warn); border-color: #fecaca; background: #fef2f2; }
+
+/* Practice page: multi-unit selection list */
+.practice-pick .pick-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+.practice-pick .pick-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1rem;
+}
+.practice-pick .pick-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--line);
+}
+.practice-pick .pick-row label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+.practice-pick .pick-stats {
+  color: var(--muted);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
