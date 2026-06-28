@@ -10,6 +10,8 @@ import math
 from dataclasses import dataclass
 from datetime import date
 
+from sqlmodel import Session, select
+
 from .models import Attempt, Goal, Item, ItemStatus, Question, Resource, Subject
 
 ITEM_SORTS = {
@@ -125,16 +127,56 @@ def progress_pair(items: list[Item]) -> ProgressPair:
     return ProgressPair(count=count_progress(items), time=time_progress(items))
 
 
+def dedup_by_video_id(items: list[Item]) -> list[Item]:
+    """Collapse copies of the same video (across resources) to one row, so a
+    video shared by several lists counts once in aggregate progress. Statuses
+    are kept in sync by ``sync_video_siblings``, so any copy is representative."""
+    seen: set[str] = set()
+    out: list[Item] = []
+    for it in items:
+        if it.video_id in seen:
+            continue
+        seen.add(it.video_id)
+        out.append(it)
+    return out
+
+
 def subject_progress(subject: Subject) -> ProgressPair:
-    """Completion across every item in every resource under a subject."""
-    items = [it for res in subject.resources for it in res.items]
+    """Completion across every distinct video under a subject (a video shared by
+    multiple lists counts once)."""
+    items = dedup_by_video_id([it for res in subject.resources for it in res.items])
     return progress_pair(items)
 
 
 def overall_progress(subjects: list[Subject]) -> ProgressPair:
-    """Completion across every item the learner has, used on the landing page."""
-    items = [it for sub in subjects for res in sub.resources for it in res.items]
+    """Completion across every distinct video the learner has, for the landing
+    page (a video shared across lists/subjects counts once)."""
+    items = dedup_by_video_id(
+        [it for sub in subjects for res in sub.resources for it in res.items]
+    )
     return progress_pair(items)
+
+
+def sync_video_siblings(session: Session, item: Item) -> list[Item]:
+    """Propagate completion state to every other copy of the same video.
+
+    Duplicate videos (same ``video_id``) across any resource or subject are one
+    logical item: marking one done marks them all (status and note alike).
+    Returns the sibling rows that actually changed, so callers can refresh them.
+    """
+    siblings = session.exec(
+        select(Item).where(Item.video_id == item.video_id, Item.id != item.id)
+    ).all()
+    changed: list[Item] = []
+    for sib in siblings:
+        if sib.status == item.status and sib.note_md == item.note_md:
+            continue
+        sib.status = item.status
+        sib.note_md = item.note_md
+        sib.updated_at = item.updated_at
+        session.add(sib)
+        changed.append(sib)
+    return changed
 
 
 # Status cycle used by the one-click toggle (FR-3.1):

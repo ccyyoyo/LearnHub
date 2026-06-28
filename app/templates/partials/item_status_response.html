@@ -1,0 +1,10 @@
+{# Status-change response: the clicked row (swapped in place) plus OOB updates
+   for the clicked list's progress bar, the floating subject progress, and every
+   same-page copy of the video whose status synced (each with its list's bar). #}
+{% include "partials/item_row.html" %}
+{% for sib in siblings %}
+{% with item = sib, oob = true, with_oob_progress = false, with_oob_floating = false %}{% include "partials/item_row.html" %}{% endwith %}
+{% endfor %}
+{% for res in sibling_resources %}
+{% with resource = res, with_oob_progress = true %}{% include "partials/progress.html" %}{% endwith %}
+{% endfor %}

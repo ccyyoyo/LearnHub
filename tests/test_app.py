@@ -50,6 +50,34 @@ def test_import_is_idempotent(client):
     assert page.count('class="item-row') == 3
 
 
+def test_single_video_in_playlist_is_deduped(client):
+    """A standalone video already present in an imported playlist is recognised
+    as a duplicate across resources, not re-added to the '個別影片' bucket."""
+    _create_subject(client)
+    sid = _subject_id(client)
+    # Playlist brings in vid1, vid2, vid3.
+    client.post(
+        "/import",
+        data={"subject_id": sid, "url": "https://www.youtube.com/playlist?list=PLtest"},
+    )
+    # Importing vid1 as a standalone video must dedupe against the playlist.
+    r = client.post(
+        "/import",
+        data={"subject_id": sid, "url": "https://www.youtube.com/watch?v=vid1"},
+    )
+    assert "新增 0 項" in r.text
+
+    # Still exactly 3 items — the standalone import added nothing.
+    page = client.get(f"/subjects/{sid}").text
+    assert page.count('class="item-row') == 3
+    # A genuinely new standalone video does get added to a fresh bucket.
+    r2 = client.post(
+        "/import",
+        data={"subject_id": sid, "url": "https://www.youtube.com/watch?v=brandnew"},
+    )
+    assert "新增 1 項" in r2.text
+
+
 def test_status_cycle_and_progress(client):
     _create_subject(client)
     sid = _subject_id(client)
@@ -567,3 +595,97 @@ def test_merge_single_video_resources(engine, monkeypatch):
     with Session(engine) as s:
         assert len(s.exec(select(Resource)).all()) == 1
         assert len(s.exec(select(Item)).all()) == 3
+
+
+# --- Cross-resource status sync (same video appearing in multiple lists) -----
+
+
+def _two_playlist_subject(client):
+    """Subject with two playlists sharing the same videos (vid1/vid2/vid3)."""
+    _create_subject(client)
+    sid = _subject_id(client)
+    for lst in ("PLa", "PLb"):
+        client.post(
+            "/import",
+            data={"subject_id": sid, "url": f"https://www.youtube.com/playlist?list={lst}"},
+        )
+    return sid
+
+
+def test_status_syncs_across_lists_same_subject(client, engine):
+    from sqlmodel import Session, select
+
+    from app.models import Item, ItemStatus
+
+    sid = _two_playlist_subject(client)
+    with Session(engine) as s:
+        copies = s.exec(select(Item).where(Item.video_id == "vid1")).all()
+        assert len(copies) == 2  # one row per playlist
+        clicked = copies[0].id
+
+    # Cycle one copy to done (not_started → in_progress → done).
+    client.post(f"/items/{clicked}/cycle")
+    client.post(f"/items/{clicked}/cycle")
+
+    with Session(engine) as s:
+        copies = s.exec(select(Item).where(Item.video_id == "vid1")).all()
+        assert all(it.status is ItemStatus.done for it in copies)
+        # A different video stays untouched.
+        others = s.exec(select(Item).where(Item.video_id == "vid2")).all()
+        assert all(it.status is ItemStatus.not_started for it in others)
+
+
+def test_status_syncs_across_subjects(client, engine):
+    from sqlmodel import Session, select
+
+    from app.models import Item, ItemStatus
+
+    _create_subject(client, name="主題一")
+    s1 = _subject_id(client)
+    client.post(
+        "/import",
+        data={"subject_id": s1, "url": "https://www.youtube.com/playlist?list=PLa"},
+    )
+    _create_subject(client, name="主題二")
+    s2 = _subject_id(client)
+    client.post(
+        "/import",
+        data={"subject_id": s2, "url": "https://www.youtube.com/watch?v=vid1"},
+    )
+
+    with Session(engine) as s:
+        copies = s.exec(select(Item).where(Item.video_id == "vid1")).all()
+        assert len(copies) == 2  # one in each subject
+        clicked = copies[0].id
+
+    client.post(f"/items/{clicked}/cycle")
+    client.post(f"/items/{clicked}/cycle")
+
+    with Session(engine) as s:
+        copies = s.exec(select(Item).where(Item.video_id == "vid1")).all()
+        assert all(it.status is ItemStatus.done for it in copies)
+
+
+def test_subject_progress_dedups_shared_video(client):
+    sid = _two_playlist_subject(client)
+    page = client.get(f"/subjects/{sid}").text
+    # 2 playlists × 3 videos = 6 rows but only 3 unique; subject progress
+    # counts the 3 unique videos, never 6.
+    assert "0/6" not in page
+    assert "0/3" in page
+
+
+def test_cycle_response_oob_updates_sibling_row(client, engine):
+    from sqlmodel import Session, select
+
+    from app.models import Item
+
+    sid = _two_playlist_subject(client)
+    with Session(engine) as s:
+        copies = s.exec(select(Item).where(Item.video_id == "vid1")).all()
+        clicked, sibling = copies[0].id, copies[1].id
+
+    r = client.post(f"/items/{clicked}/cycle")
+    # The sibling copy comes back as an out-of-band swap so it updates live.
+    assert f'id="item-{sibling}"' in r.text
+    assert 'hx-swap-oob="true"' in r.text

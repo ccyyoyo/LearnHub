@@ -1,4 +1,4 @@
-<li class="item-row status-{{ item.status.value }}" id="item-{{ item.id }}">
+<li class="item-row status-{{ item.status.value }}" id="item-{{ item.id }}"{% if oob %} hx-swap-oob="true"{% endif %}>
   {% if edit %}
   <input class="item-check" type="checkbox" name="item_ids" value="{{ item.id }}" aria-label="選取「{{ item.title }}」">
   {% endif %}
