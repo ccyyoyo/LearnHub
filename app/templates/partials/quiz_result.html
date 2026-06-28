@@ -1,0 +1,12 @@
+<p class="q-stem">{{ question.stem }}</p>
+<ul class="q-options answered">
+  {% for opt in question.options %}
+  <li class="q-opt{% if loop.index0 == question.answer_index %} correct{% elif loop.index0 == chosen_index %} wrong{% endif %}">
+    <span>{{ opt }}</span>
+  </li>
+  {% endfor %}
+</ul>
+<p class="q-verdict {{ 'ok' if is_correct else 'no' }}">
+  {{ '答對 ✅' if is_correct else '答錯 ❌' }}
+</p>
+<p class="q-explain">{{ question.explanation }}</p>

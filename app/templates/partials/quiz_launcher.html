@@ -1,0 +1,16 @@
+<form class="quiz-gen"
+      hx-post="/items/{{ item.id }}/quiz"
+      hx-target="{{ quiz_target }}"
+      hx-swap="innerHTML"
+      hx-indicator="#quiz-spin-{{ item.id }}"
+      hx-disabled-elt="find button">
+  <label class="quiz-n">題數
+    <select name="n">
+      {% for i in range(1, 11) %}
+      <option value="{{ i }}" {{ 'selected' if i == 5 }}>{{ i }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <button type="submit">出題</button>
+  <span id="quiz-spin-{{ item.id }}" class="htmx-indicator spinner">出題中…</span>
+</form>

@@ -1,0 +1,11 @@
+{% if not questions %}
+<p class="empty">這支影片暫時無法出題,請稍後再試或先補上筆記。</p>
+{% else %}
+<ol class="quiz-list">
+  {% for q in questions %}
+  <li class="quiz-q" id="quiz-q-{{ q.id }}">
+    {% with q = q %}{% include "partials/quiz_question.html" %}{% endwith %}
+  </li>
+  {% endfor %}
+</ol>
+{% endif %}

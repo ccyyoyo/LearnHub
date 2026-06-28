@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+<nav class="crumb"><a href="/subjects/{{ subject.id }}">← {{ subject.name }}</a></nav>
+<section class="panel">
+  <h2>練習推薦:{{ subject.name }}</h2>
+  {% if item %}
+  <p class="hint">系統挑了這個主題裡最該練的影片(沒練過優先,再來是錯誤率高的)。</p>
+  <p>推薦練習:<strong>{{ item.title }}</strong></p>
+  {% with quiz_target = "#practice-quiz" %}
+    {% include "partials/quiz_launcher.html" %}
+  {% endwith %}
+  <div id="practice-quiz" class="quiz-panel-box"></div>
+  {% else %}
+  <p class="empty">這個主題還沒有可練習的影片,先去匯入一些吧!</p>
+  {% endif %}
+</section>
+{% endblock %}

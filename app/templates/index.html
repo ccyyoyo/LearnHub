@@ -16,4 +16,33 @@
     {% include "partials/subject_list.html" %}
   </div>
 </section>
+
+{% if quiz_stats %}
+<section class="panel quiz-panel">
+  <h2>題庫</h2>
+  <p class="quiz-stats">
+    題庫 <strong>{{ quiz_stats.total_questions }}</strong> 題 ·
+    作答 <strong>{{ quiz_stats.total_attempts }}</strong> 次 ·
+    正確率 <strong>{{ quiz_stats.correct_rate }}%</strong> ·
+    錯題 <strong>{{ quiz_stats.wrong_count }}</strong>
+  </p>
+  {% if practice_rows %}
+  <h3>練習推薦</h3>
+  <ul class="practice-list">
+    {% for row in practice_rows %}
+    <li class="practice-row">
+      <a class="practice-name" href="/practice/{{ row.subject.id }}">{{ row.subject.name }}</a>
+      {% if not row.practiced %}
+      <span class="tag warn">⚠️ 未練習</span>
+      {% else %}
+      <span class="tag">錯誤率 {{ row.error_rate }}%</span>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="hint">匯入影片後,就能在這裡看到弱點主題與練習推薦。</p>
+  {% endif %}
+</section>
+{% endif %}
 {% endblock %}

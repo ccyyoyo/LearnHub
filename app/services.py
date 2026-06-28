@@ -10,7 +10,7 @@ import math
 from dataclasses import dataclass
 from datetime import date
 
-from .models import Goal, Item, ItemStatus, Resource, Subject
+from .models import Attempt, Goal, Item, ItemStatus, Question, Resource, Subject
 
 ITEM_SORTS = {
     "original",
@@ -253,3 +253,152 @@ def study_plan(goal: Goal, subjects: list[Subject], today: date) -> StudyPlan:
         daily_minutes=daily_minutes,
         expected_percent=expected_percent,
     )
+
+
+# --- Quiz / question bank (Phase 3) -----------------------------------------
+#
+# All counts derived on the fly from Question/Attempt rows — no stored
+# aggregates, same as progress above (PRD §8 note). Functions operate on loaded
+# ORM objects so they stay pure and unit-testable.
+
+
+def _latest_attempt(question: Question) -> Attempt | None:
+    """The most recent answer to a question, or None if never attempted."""
+    if not question.attempts:
+        return None
+    return max(question.attempts, key=lambda a: a.created_at)
+
+
+def question_is_outstanding(question: Question) -> bool:
+    """True when the learner's *latest* answer was wrong (a question to review)."""
+    latest = _latest_attempt(question)
+    return latest is not None and not latest.is_correct
+
+
+def _item_questions(item: Item) -> list[Question]:
+    return list(item.questions)
+
+
+def item_attempt_count(item: Item) -> int:
+    return sum(len(q.attempts) for q in item.questions)
+
+
+def item_error_rate(item: Item) -> float:
+    """Wrong answers / total answers across the item's questions (0 if none)."""
+    total = item_attempt_count(item)
+    if total == 0:
+        return 0.0
+    wrong = sum(1 for q in item.questions for a in q.attempts if not a.is_correct)
+    return wrong / total
+
+
+def recent_wrong_questions(item: Item) -> list[Question]:
+    """Questions whose latest answer was wrong, newest-wrong first.
+
+    This is the review pool the assembler reuses for high-error items.
+    """
+    scored: list[tuple[datetime, Question]] = []
+    for q in item.questions:
+        latest = _latest_attempt(q)
+        if latest is not None and not latest.is_correct:
+            scored.append((latest.created_at, q))
+    scored.sort(key=lambda pair: pair[0], reverse=True)
+    return [q for _, q in scored]
+
+
+def assemble_quiz_plan(item: Item, n: int) -> tuple[list[Question], int]:
+    """Decide the make-up of an N-question quiz for ``item``.
+
+    Reuse the learner's wrong questions first (free, real review); generate the
+    remainder. A never-practiced item has no wrong questions, so it's all new.
+    Wrong questions beyond N are dropped — we keep the most recently missed.
+    Returns ``(reused_questions, count_to_generate)``.
+    """
+    reuse = recent_wrong_questions(item)[:n]
+    return reuse, n - len(reuse)
+
+
+def _subject_items(subject: Subject) -> list[Item]:
+    return [it for res in subject.resources for it in res.items]
+
+
+def select_practice_item(subject: Subject) -> Item | None:
+    """Pick the item most in need of practice (home "練習推薦" → 出題, entry B).
+
+    Never-practiced items come first (coverage), ordered by their place in the
+    subject; once everything has been practiced, the highest error rate wins.
+    """
+    items = sorted(
+        _subject_items(subject),
+        key=lambda it: (it.resource.created_at, it.position),
+    )
+    if not items:
+        return None
+    never = [it for it in items if item_attempt_count(it) == 0]
+    if never:
+        return never[0]
+    return max(items, key=item_error_rate)
+
+
+def resolve_source_text(item: Item, transcript: str | None) -> str:
+    """Fallback ladder for generation input: transcript → notes → title."""
+    if transcript and transcript.strip():
+        return transcript
+    if item.note_md and item.note_md.strip():
+        return item.note_md
+    return item.title
+
+
+@dataclass(frozen=True)
+class QuizStats:
+    """Home-page question-bank summary."""
+
+    total_questions: int
+    total_attempts: int
+    correct_rate: int  # %, 0 when nothing answered
+    wrong_count: int  # questions whose latest answer was wrong (to review)
+
+
+def quiz_stats(questions: list[Question], attempts: list[Attempt]) -> QuizStats:
+    total_attempts = len(attempts)
+    correct = sum(1 for a in attempts if a.is_correct)
+    correct_rate = round(correct / total_attempts * 100) if total_attempts else 0
+    wrong_count = sum(1 for q in questions if question_is_outstanding(q))
+    return QuizStats(
+        total_questions=len(questions),
+        total_attempts=total_attempts,
+        correct_rate=correct_rate,
+        wrong_count=wrong_count,
+    )
+
+
+@dataclass(frozen=True)
+class SubjectPractice:
+    """One row of the home "練習推薦" list."""
+
+    subject: Subject
+    practiced: bool
+    error_rate: int  # %, only meaningful when practiced
+
+
+def practice_recommendations(subjects: list[Subject]) -> list[SubjectPractice]:
+    """Subjects ranked by need: never-practiced first, then error rate desc.
+
+    Subjects with no items are skipped (nothing to practice).
+    """
+    rows: list[SubjectPractice] = []
+    for subject in subjects:
+        items = _subject_items(subject)
+        if not items:
+            continue
+        attempts = sum(item_attempt_count(it) for it in items)
+        if attempts == 0:
+            rows.append(SubjectPractice(subject, practiced=False, error_rate=0))
+            continue
+        wrong = sum(
+            1 for it in items for q in it.questions for a in q.attempts if not a.is_correct
+        )
+        rate = round(wrong / attempts * 100)
+        rows.append(SubjectPractice(subject, practiced=True, error_rate=rate))
+    rows.sort(key=lambda r: (r.practiced, -r.error_rate))
+    return rows

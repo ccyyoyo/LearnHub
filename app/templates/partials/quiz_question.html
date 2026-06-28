@@ -1,0 +1,13 @@
+<p class="q-stem">{{ q.stem }}</p>
+<form class="q-options"
+      hx-post="/questions/{{ q.id }}/answer"
+      hx-target="#quiz-q-{{ q.id }}"
+      hx-swap="innerHTML">
+  {% for opt in q.options %}
+  <label class="q-opt">
+    <input type="radio" name="chosen_index" value="{{ loop.index0 }}" required>
+    <span>{{ opt }}</span>
+  </label>
+  {% endfor %}
+  <button type="submit">作答</button>
+</form>

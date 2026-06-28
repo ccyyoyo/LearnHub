@@ -24,6 +24,17 @@
     {{ STATUS_LABELS[item.status] }}
   </button>
   {% endif %}
+  {% if not edit %}
+  <details class="quiz-box">
+    <summary class="btn-quiz" title="用 AI 產生 N5 風格題目">出題</summary>
+    <div class="quiz-launch">
+      {% with quiz_target = "#quiz-panel-" ~ item.id %}
+        {% include "partials/quiz_launcher.html" %}
+      {% endwith %}
+    </div>
+    <div id="quiz-panel-{{ item.id }}" class="quiz-panel-box"></div>
+  </details>
+  {% endif %}
 </li>
 {% if with_oob_progress %}
   {% include "partials/progress.html" %}

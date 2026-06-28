@@ -326,3 +326,43 @@ html.mode-time .fp-inner { transform: rotateY(180deg); }
 .htmx-request .htmx-indicator,
 .htmx-request.htmx-indicator { opacity: 1; }
 .spinner { color: var(--muted); font-size: .88rem; }
+
+/* --- Quiz / question bank (Phase 3) -------------------------------------- */
+/* Let the quiz launcher wrap onto its own line below the row instead of
+   squeezing the title (a flex:1 sibling) into a vertical sliver. */
+.item-row { flex-wrap: wrap; }
+.quiz-box { flex-basis: 100%; margin-top: .5rem; }
+.quiz-box > summary.btn-quiz {
+  display: inline-block; cursor: pointer; list-style: none;
+  font-size: .82rem; color: var(--brand); border: 1px solid var(--line);
+  border-radius: 999px; padding: .15rem .7rem; background: var(--panel);
+}
+.quiz-box > summary.btn-quiz::-webkit-details-marker { display: none; }
+.quiz-box[open] > summary.btn-quiz { color: var(--brand-dark); border-color: var(--brand); }
+.quiz-launch { display: flex; align-items: center; gap: .5rem; margin: .6rem 0; flex-wrap: wrap; }
+.quiz-launch .quiz-n { font-size: .85rem; color: var(--muted); }
+.quiz-launch select { padding: .2rem .4rem; }
+
+.quiz-list { list-style: none; padding: 0; margin: .4rem 0 0; display: grid; gap: .8rem; }
+.quiz-q {
+  border: 1px solid var(--line); border-radius: var(--radius);
+  padding: .8rem 1rem; background: var(--bg);
+}
+.q-stem { font-weight: 600; margin: 0 0 .5rem; }
+.q-options { display: grid; gap: .35rem; margin: 0; padding: 0; list-style: none; }
+.q-opt { display: flex; align-items: center; gap: .5rem; }
+.q-options.answered .q-opt { padding: .25rem .5rem; border-radius: 8px; }
+.q-options.answered .q-opt.correct { background: #dcfce7; color: var(--ok); font-weight: 600; }
+.q-options.answered .q-opt.wrong { background: #fee2e2; color: var(--warn); }
+.q-options button { justify-self: start; margin-top: .3rem; }
+.q-verdict { font-weight: 700; margin: .6rem 0 .3rem; }
+.q-verdict.ok { color: var(--ok); }
+.q-verdict.no { color: var(--warn); }
+.q-explain { color: var(--muted); font-size: .9rem; margin: 0; }
+
+.quiz-stats { font-size: .95rem; color: var(--ink); }
+.practice-list { list-style: none; padding: 0; margin: .4rem 0 0; display: grid; gap: .4rem; }
+.practice-row { display: flex; align-items: center; gap: .6rem; }
+.practice-name { font-weight: 600; }
+.tag { font-size: .78rem; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: .1rem .55rem; }
+.tag.warn { color: var(--warn); border-color: #fecaca; background: #fef2f2; }

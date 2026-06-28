@@ -9,10 +9,12 @@ from fastapi.responses import HTMLResponse
 from sqlmodel import Session, select
 
 from ..db import get_session
-from ..models import Goal, Item, ItemStatus, Resource, Subject, utcnow
+from ..models import Attempt, Goal, Item, ItemStatus, Question, Resource, Subject, utcnow
 from ..services import (
     normalize_item_sort,
     overall_progress,
+    practice_recommendations,
+    quiz_stats,
     sort_items,
     study_plan,
     subject_progress,
@@ -57,6 +59,17 @@ def _goal_context(session: Session) -> dict:
         return {"plan": None}
     subjects = session.exec(select(Subject)).all()
     return {"plan": study_plan(goal, list(subjects), date.today())}
+
+
+def _quiz_context(session: Session) -> dict:
+    """Home question-bank summary + weakness-ranked practice recommendations."""
+    questions = session.exec(select(Question)).all()
+    attempts = session.exec(select(Attempt)).all()
+    subjects = session.exec(select(Subject).order_by(Subject.created_at)).all()
+    return {
+        "quiz_stats": quiz_stats(list(questions), list(attempts)),
+        "practice_rows": practice_recommendations(list(subjects)),
+    }
 
 
 def _filter_predicate(filter: str):
@@ -115,6 +128,7 @@ def home(request: Request, session: Session = Depends(get_session)):
     context = _subject_list_context(session)
     context["emit_oob_floating"] = False  # full page: base.html renders it inline
     context.update(_goal_context(session))
+    context.update(_quiz_context(session))
     return templates.TemplateResponse(request, "index.html", context)
 
 

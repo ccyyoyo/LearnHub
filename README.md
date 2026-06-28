@@ -71,4 +71,7 @@ learnhub.db        # SQLite(gitignored)
 ## 路線圖
 
 - **Phase 2 — 筆記**:每個項目可寫 / 渲染 Markdown(`note_md` 欄位已就緒)。
-- **Phase 3 — AI 輔助**:抓字幕(`youtube-transcript-api`)→ LLM(OpenRouter)做摘要 / 練習題。
+- **Phase 3 — AI 出題(進行中)**:抓字幕(`youtube-transcript-api`,fallback 筆記 / 標題)
+  → LLM 產生 JLPT N5 風格單選題。Provider 可換(`AI_PROVIDER`,先支援 Gemini)。
+  作答存入題庫與作答紀錄;主頁顯示題庫統計與弱點「練習推薦」。設計見
+  `docs/superpowers/specs/2026-06-28-ai-quiz-generation-design.md`。

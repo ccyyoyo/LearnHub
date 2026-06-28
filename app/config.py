@@ -25,6 +25,14 @@ class Settings(BaseSettings):
     # SQLite database location (single file — NFR-1).
     database_url: str = "sqlite:///learnhub.db"
 
+    # --- Phase 3: AI quiz generation -----------------------------------------
+    # Provider is swappable via env so models can be compared without code
+    # changes. ``gemini`` is the first implementation; others slot in behind the
+    # same QuestionProvider interface (app/ai/).
+    ai_provider: str = "gemini"
+    ai_model: str = "gemini-2.5-flash"
+    gemini_api_key: str = ""
+
 
 @lru_cache
 def get_settings() -> Settings:
