@@ -482,3 +482,59 @@ def test_set_goal_bad_date_is_ignored(client):
     r = client.post("/goal", data={"name": "N4", "exam_date": "not-a-date"})
     assert r.status_code == 200
     assert "設定考試目標" in r.text  # stayed on the setup form, no crash
+
+
+# --- Migration: fold legacy per-video resources into one bucket -------------
+
+
+def test_merge_single_video_resources(engine, monkeypatch):
+    """Legacy data with one resource per standalone video collapses into the
+    single '個別影片' bucket, deduping by video_id and re-sequencing positions."""
+    from sqlmodel import Session, select
+
+    from app import db as dbmod
+    from app.models import SINGLES_SOURCE, Item, Resource, ResourceType, Subject
+
+    monkeypatch.setattr(dbmod, "engine", engine)
+    with Session(engine) as s:
+        sub = Subject(name="日語 N5")
+        s.add(sub)
+        s.commit()
+        s.refresh(sub)
+        rids = []
+        for i, title in enumerate(["数字", "数量詞", "感応詞"]):
+            r = Resource(
+                subject_id=sub.id,
+                type=ResourceType.video,
+                source_url=f"https://youtu.be/v{i}",
+                title=title,
+            )
+            s.add(r)
+            s.commit()
+            s.refresh(r)
+            rids.append(r.id)
+            s.add(Item(resource_id=r.id, video_id=f"v{i}", title=title, position=0))
+            s.commit()
+        # A duplicate of v0 living under the 2nd resource must be dropped.
+        s.add(Item(resource_id=rids[1], video_id="v0", title="dup", position=1))
+        s.commit()
+
+    dbmod._merge_single_video_resources()
+
+    with Session(engine) as s:
+        resources = s.exec(select(Resource)).all()
+        assert len(resources) == 1
+        bucket = resources[0]
+        assert bucket.title == "個別影片"
+        assert bucket.source_url == SINGLES_SOURCE
+        assert sorted((it.video_id, it.position) for it in bucket.items) == [
+            ("v0", 0),
+            ("v1", 1),
+            ("v2", 2),
+        ]
+
+    # Idempotent: a second pass leaves the already-merged subject untouched.
+    dbmod._merge_single_video_resources()
+    with Session(engine) as s:
+        assert len(s.exec(select(Resource)).all()) == 1
+        assert len(s.exec(select(Item)).all()) == 3

@@ -11,16 +11,12 @@ from fastapi.responses import HTMLResponse
 from sqlmodel import Session, select
 
 from ..db import get_session
-from ..models import Item, Resource, Subject
+from ..models import SINGLES_SOURCE, Item, Resource, Subject
 from ..services import normalize_item_sort, sort_items, subject_progress
 from ..templating import templates
 from ..youtube import YouTubeClient, YouTubeError, parse_youtube_url
 
 router = APIRouter()
-
-# Sentinel stored in source_url for the aggregate "single videos" resource.
-# Not shown to users — just an internal bucket identifier.
-_SINGLES_SOURCE = "__singles__"
 
 
 @router.post("/import", response_class=HTMLResponse)
@@ -57,7 +53,7 @@ async def import_resource(
             resource = Resource(
                 subject_id=subject_id,
                 type=ResourceType.video,
-                source_url=_SINGLES_SOURCE,
+                source_url=SINGLES_SOURCE,
                 title="個別影片",
             )
             session.add(resource)
